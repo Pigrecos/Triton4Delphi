@@ -9,7 +9,7 @@
 * [Tritondll.cpp](https://github.com/Pigrecos/Triton4Delphi/tree/master/Triton-C/Triton-C/Triton_Dll/bindings/Delphi)
 * [Tritondll.h](https://github.com/Pigrecos/Triton4Delphi/tree/master/Triton-C/Triton-C/Triton_Dll/includes/triton)
 * [Test project](https://github.com/Pigrecos/Triton4Delphi/tree/master/Src/Test) compiled with Delphi 10.3(Rio)
-* Record Wrapper Based on [python binding](https://github.com/Pigrecos/Triton/tree/master/src/libtriton/bindings/python)
+* Record Wrapper Based on [python binding](https://github.com/JonathanSalwan/Triton/tree/master/src/libtriton/bindings/python)
   
 ## ToDo  
   * Adding support uint512.
