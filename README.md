@@ -11,10 +11,7 @@
 * [Test project](https://github.com/Pigrecos/Triton4Delphi/tree/master/Src/Test) compiled with Delphi 10.3(Rio)
 * Record Wrapper Based on [python binding](https://github.com/JonathanSalwan/Triton/tree/master/src/libtriton/bindings/python)
   
-## ToDo  
-  * Adding support uint512.
-  * Proving and test Callback's procedure(very hard for delphi)
-  * Test test and More . Any collaboration is welcome ;) 
+
   
 ## ToDo  - Attention is an initial release and not 100% tested -
   * Adding support uint512.
