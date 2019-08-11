@@ -390,8 +390,10 @@ bool   buildSemantics(HandleApi Handle, HandleInstruz inst)
 //! [**IR builder api**] - Returns the AST context. Used as AST builder.
 HandleAstContext   getAstContext(HandleApi Handle)
 {
-	HandleAstContext s = &Handle->getAstContext();
-	return s;
+   HandleAstContext cc = new std::shared_ptr<triton::ast::AstContext>;
+   *cc = Handle->getAstContext();
+
+	return cc;
 }
 
 /* AST Representation API ======================================================================== */
@@ -2275,12 +2277,24 @@ void EXPORTCALL SVsetComment(HandleSharedSymbolicVariable Handle, char * comment
 
 hModes MCreateModes(void)
 {
-	return new triton::modes::Modes();
+	hModes ss = new std::shared_ptr<triton::modes::Modes>;
+
+	auto cc = std::make_shared<triton::modes::Modes>();
+
+	*ss = cc;
+
+	return ss;
 }
 
 hModes MCreateModesFrom(hModes hMode)
-{
-	return new triton::modes::Modes(*hMode);
+{	
+	hModes ss = new std::shared_ptr<triton::modes::Modes>;
+
+	auto cc = std::make_shared<triton::modes::Modes>(*hMode->get());
+
+	*ss = cc;
+
+	return ss;
 }
 
 void MDeleteModes(hModes hMode)
@@ -2290,12 +2304,12 @@ void MDeleteModes(hModes hMode)
 
 bool MisModeEnabled(hModes hMode,triton::modes::mode_e mode)
 {
-	return hMode->isModeEnabled(mode);
+	return hMode->get()->isModeEnabled(mode);
 }
 
 void MenableMode(hModes hMode,triton::modes::mode_e mode, bool flag)
 {
-	hMode->enableMode(mode,flag);
+	hMode->get()->enableMode(mode,flag);
 }
 
 
@@ -2331,12 +2345,28 @@ void RAPsetMode(hAstRepresentation handle, triton::uint32 mode)
 
 HandleAstContext CtxCreate(hModes modes)
 {
-	return new AstContext(*modes);
+	HandleAstContext ss = new std::shared_ptr<triton::ast::AstContext>;
+
+	
+	//auto cc = std::make_shared<AstContext>(modes->get());
+
+	//*ss = cc;
+	
+	return ss;
+	
 }
 
 HandleAstContext CtxCreateFrom(HandleAstContext other)
 {
-	return new AstContext(*other);
+	HandleAstContext ss = new std::shared_ptr<triton::ast::AstContext>;
+
+	
+	//auto cc = std::make_shared<AstContext>(*other->get());
+
+	//*ss = cc;
+
+	return ss;
+
 }
 
 void CtxDelete(HandleAstContext hCtx)
@@ -2347,7 +2377,7 @@ void CtxDelete(HandleAstContext hCtx)
 HandleAbstractNode assert_(HandleAstContext hCtx, HandleAbstractNode expr)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->assert_(*expr);
+	*cc = hCtx->get()->assert_(*expr);
 
 	return cc;
 }
@@ -2355,7 +2385,7 @@ HandleAbstractNode assert_(HandleAstContext hCtx, HandleAbstractNode expr)
 HandleAbstractNode bv(HandleAstContext hCtx, triton::uint64 value, triton::uint32 size) 
 {	
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bv(value, size);
+	*cc = hCtx->get()->bv(value, size);
 	
 	return cc;
 }
@@ -2363,7 +2393,7 @@ HandleAbstractNode bv(HandleAstContext hCtx, triton::uint64 value, triton::uint3
 HandleAbstractNode bvand(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvand(*expr1,*expr2);
+	*cc = hCtx->get()->bvand(*expr1,*expr2);
 
 	return cc;
 }
@@ -2371,7 +2401,7 @@ HandleAbstractNode bvand(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode EXPORTCALL bvadd(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvadd(*expr1, *expr2);
+	*cc = hCtx->get()->bvadd(*expr1, *expr2);
 
 	return cc;
 }
@@ -2379,7 +2409,7 @@ HandleAbstractNode EXPORTCALL bvadd(HandleAstContext hCtx, HandleAbstractNode ex
 HandleAbstractNode bvashr(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvashr(*expr1, *expr2);
+	*cc = hCtx->get()->bvashr(*expr1, *expr2);
 
 	return cc;
 }
@@ -2387,7 +2417,7 @@ HandleAbstractNode bvashr(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode bvfalse(HandleAstContext hCtx)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvfalse();
+	*cc = hCtx->get()->bvfalse();
 
 	return cc;
 }
@@ -2395,7 +2425,7 @@ HandleAbstractNode bvfalse(HandleAstContext hCtx)
 HandleAbstractNode bvlshr(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvlshr(*expr1,*expr2);
+	*cc = hCtx->get()->bvlshr(*expr1,*expr2);
 
 	return cc;
 }
@@ -2403,7 +2433,7 @@ HandleAbstractNode bvlshr(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode bvmul(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvmul(*expr1, *expr2);
+	*cc = hCtx->get()->bvmul(*expr1, *expr2);
 
 	return cc;
 }
@@ -2411,7 +2441,7 @@ HandleAbstractNode bvmul(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvnand(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvnand(*expr1, *expr2);
+	*cc = hCtx->get()->bvnand(*expr1, *expr2);
 
 	return cc;
 }
@@ -2419,7 +2449,7 @@ HandleAbstractNode bvnand(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode bvneg(HandleAstContext hCtx, HandleAbstractNode expr)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvneg(*expr);
+	*cc = hCtx->get()->bvneg(*expr);
 
 	return cc;
 }
@@ -2427,7 +2457,7 @@ HandleAbstractNode bvneg(HandleAstContext hCtx, HandleAbstractNode expr)
 HandleAbstractNode bvnor(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvnor(*expr1, *expr2);
+	*cc = hCtx->get()->bvnor(*expr1, *expr2);
 
 	return cc;
 }
@@ -2435,7 +2465,7 @@ HandleAbstractNode bvnor(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvnot(HandleAstContext hCtx, HandleAbstractNode expr)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvnot(*expr);
+	*cc = hCtx->get()->bvnot(*expr);
 
 	return cc;
 }
@@ -2443,7 +2473,7 @@ HandleAbstractNode bvnot(HandleAstContext hCtx, HandleAbstractNode expr)
 HandleAbstractNode bvor(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvor(*expr1,*expr2);
+	*cc = hCtx->get()->bvor(*expr1,*expr2);
 
 	return cc;
 }
@@ -2451,7 +2481,7 @@ HandleAbstractNode bvor(HandleAstContext hCtx, HandleAbstractNode expr1, HandleA
 HandleAbstractNode bvrol_u(HandleAstContext hCtx, HandleAbstractNode expr, triton::uint32 rot)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvrol(*expr,rot);
+	*cc = hCtx->get()->bvrol(*expr,rot);
 
 	return cc;
 }
@@ -2459,7 +2489,7 @@ HandleAbstractNode bvrol_u(HandleAstContext hCtx, HandleAbstractNode expr, trito
 HandleAbstractNode bvrol(HandleAstContext hCtx, HandleAbstractNode expr, HandleAbstractNode rot)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvrol(*expr,*rot);
+	*cc = hCtx->get()->bvrol(*expr,*rot);
 
 	return cc;
 }
@@ -2467,7 +2497,7 @@ HandleAbstractNode bvrol(HandleAstContext hCtx, HandleAbstractNode expr, HandleA
 HandleAbstractNode bvror_u(HandleAstContext hCtx, HandleAbstractNode expr, triton::uint32 rot)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvror(*expr,rot);
+	*cc = hCtx->get()->bvror(*expr,rot);
 
 	return cc;
 }
@@ -2475,7 +2505,7 @@ HandleAbstractNode bvror_u(HandleAstContext hCtx, HandleAbstractNode expr, trito
 HandleAbstractNode bvror(HandleAstContext hCtx, HandleAbstractNode expr, HandleAbstractNode rot)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvror(*expr,*rot);
+	*cc = hCtx->get()->bvror(*expr,*rot);
 
 	return cc;
 }
@@ -2483,7 +2513,7 @@ HandleAbstractNode bvror(HandleAstContext hCtx, HandleAbstractNode expr, HandleA
 HandleAbstractNode bvsdiv(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvsdiv(*expr1,*expr2);
+	*cc = hCtx->get()->bvsdiv(*expr1,*expr2);
 
 	return cc;
 }
@@ -2491,7 +2521,7 @@ HandleAbstractNode bvsdiv(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode bvsge(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvsge(*expr1, *expr2);
+	*cc = hCtx->get()->bvsge(*expr1, *expr2);
 
 	return cc;
 }
@@ -2499,7 +2529,7 @@ HandleAbstractNode bvsge(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvsgt(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvsgt(*expr1, *expr2);
+	*cc = hCtx->get()->bvsgt(*expr1, *expr2);
 
 	return cc;
 }
@@ -2507,7 +2537,7 @@ HandleAbstractNode bvsgt(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvshl(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvshl(*expr1, *expr2);
+	*cc = hCtx->get()->bvshl(*expr1, *expr2);
 
 	return cc;
 }
@@ -2515,7 +2545,7 @@ HandleAbstractNode bvshl(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvsle(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvsle(*expr1, *expr2);
+	*cc = hCtx->get()->bvsle(*expr1, *expr2);
 
 	return cc;
 }
@@ -2523,7 +2553,7 @@ HandleAbstractNode bvsle(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvslt(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvslt(*expr1, *expr2);
+	*cc = hCtx->get()->bvslt(*expr1, *expr2);
 
 	return cc;
 }
@@ -2531,7 +2561,7 @@ HandleAbstractNode bvslt(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvsmod(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvsmod(*expr1, *expr2);
+	*cc = hCtx->get()->bvsmod(*expr1, *expr2);
 
 	return cc;
 }
@@ -2539,7 +2569,7 @@ HandleAbstractNode bvsmod(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode bvsrem(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvsrem(*expr1, *expr2);
+	*cc = hCtx->get()->bvsrem(*expr1, *expr2);
 
 	return cc;
 }
@@ -2547,7 +2577,7 @@ HandleAbstractNode bvsrem(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode bvsub(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvsub(*expr1, *expr2);
+	*cc = hCtx->get()->bvsub(*expr1, *expr2);
 
 	return cc;
 }
@@ -2555,7 +2585,7 @@ HandleAbstractNode bvsub(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvtrue(HandleAstContext hCtx)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvtrue();
+	*cc = hCtx->get()->bvtrue();
 
 	return cc;
 }
@@ -2563,7 +2593,7 @@ HandleAbstractNode bvtrue(HandleAstContext hCtx)
 HandleAbstractNode bvudiv(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvudiv(*expr1, *expr2);
+	*cc = hCtx->get()->bvudiv(*expr1, *expr2);
 
 	return cc;
 }
@@ -2571,7 +2601,7 @@ HandleAbstractNode bvudiv(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode bvuge(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvuge(*expr1, *expr2);
+	*cc = hCtx->get()->bvuge(*expr1, *expr2);
 
 	return cc;
 }
@@ -2579,7 +2609,7 @@ HandleAbstractNode bvuge(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvugt(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvugt(*expr1, *expr2);
+	*cc = hCtx->get()->bvugt(*expr1, *expr2);
 
 	return cc;
 }
@@ -2587,7 +2617,7 @@ HandleAbstractNode bvugt(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvule(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvule(*expr1, *expr2);
+	*cc = hCtx->get()->bvule(*expr1, *expr2);
 
 	return cc;
 }
@@ -2595,7 +2625,7 @@ HandleAbstractNode bvule(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvult(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvult(*expr1, *expr2);
+	*cc = hCtx->get()->bvult(*expr1, *expr2);
 
 	return cc;
 }
@@ -2603,7 +2633,7 @@ HandleAbstractNode bvult(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode bvurem(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvurem(*expr1, *expr2);
+	*cc = hCtx->get()->bvurem(*expr1, *expr2);
 
 	return cc;
 }
@@ -2611,7 +2641,7 @@ HandleAbstractNode bvurem(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode bvxnor(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvxnor(*expr1, *expr2);
+	*cc = hCtx->get()->bvxnor(*expr1, *expr2);
 
 	return cc;
 }
@@ -2619,7 +2649,7 @@ HandleAbstractNode bvxnor(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode bvxor(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->bvxor(*expr1, *expr2);
+	*cc = hCtx->get()->bvxor(*expr1, *expr2);
 
 	return cc;
 }
@@ -2627,7 +2657,7 @@ HandleAbstractNode bvxor(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode concat(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->concat(*expr1, *expr2);
+	*cc = hCtx->get()->concat(*expr1, *expr2);
 
 	return cc;
 }
@@ -2635,7 +2665,7 @@ HandleAbstractNode concat(HandleAstContext hCtx, HandleAbstractNode expr1, Handl
 HandleAbstractNode declare(HandleAstContext hCtx, HandleAbstractNode var)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->declare(*var);
+	*cc = hCtx->get()->declare(*var);
 
 	return cc;
 }
@@ -2643,7 +2673,7 @@ HandleAbstractNode declare(HandleAstContext hCtx, HandleAbstractNode var)
 HandleAbstractNode distinct(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->distinct(*expr1, *expr2);
+	*cc = hCtx->get()->distinct(*expr1, *expr2);
 
 	return cc;
 }
@@ -2651,7 +2681,7 @@ HandleAbstractNode distinct(HandleAstContext hCtx, HandleAbstractNode expr1, Han
 HandleAbstractNode equal(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->equal(*expr1, *expr2);
+	*cc = hCtx->get()->equal(*expr1, *expr2);
 
 	return cc;
 }
@@ -2659,7 +2689,7 @@ HandleAbstractNode equal(HandleAstContext hCtx, HandleAbstractNode expr1, Handle
 HandleAbstractNode extract(HandleAstContext hCtx, triton::uint32 high, triton::uint32 low, HandleAbstractNode expr)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->extract(high, low, *expr);
+	*cc = hCtx->get()->extract(high, low, *expr);
 
 	return cc;
 }
@@ -2667,7 +2697,7 @@ HandleAbstractNode extract(HandleAstContext hCtx, triton::uint32 high, triton::u
 HandleAbstractNode iff(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->iff(*expr1, *expr2);
+	*cc = hCtx->get()->iff(*expr1, *expr2);
 
 	return cc;
 }
@@ -2675,7 +2705,7 @@ HandleAbstractNode iff(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAb
 HandleAbstractNode integer(HandleAstContext hCtx, triton::uint64 value)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->integer(value);
+	*cc = hCtx->get()->integer(value);
 
 	return cc;
 }
@@ -2683,7 +2713,7 @@ HandleAbstractNode integer(HandleAstContext hCtx, triton::uint64 value)
 HandleAbstractNode ite(HandleAstContext hCtx, HandleAbstractNode ifExpr, HandleAbstractNode thenExpr, HandleAbstractNode elseExpr)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->ite(*ifExpr,*thenExpr,*elseExpr);
+	*cc = hCtx->get()->ite(*ifExpr,*thenExpr,*elseExpr);
 
 	return cc;
 }
@@ -2691,7 +2721,7 @@ HandleAbstractNode ite(HandleAstContext hCtx, HandleAbstractNode ifExpr, HandleA
 HandleAbstractNode land(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->land(*expr1, *expr2);
+	*cc = hCtx->get()->land(*expr1, *expr2);
 
 	return cc;
 }
@@ -2699,7 +2729,7 @@ HandleAbstractNode land(HandleAstContext hCtx, HandleAbstractNode expr1, HandleA
 HandleAbstractNode let(HandleAstContext hCtx, char * alias, HandleAbstractNode expr2, HandleAbstractNode expr3)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->let(alias, *expr2, *expr3);
+	*cc = hCtx->get()->let(alias, *expr2, *expr3);
 
 	return cc;
 }
@@ -2707,7 +2737,7 @@ HandleAbstractNode let(HandleAstContext hCtx, char * alias, HandleAbstractNode e
 HandleAbstractNode lnot(HandleAstContext hCtx, HandleAbstractNode expr)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->lnot(*expr);
+	*cc = hCtx->get()->lnot(*expr);
 
 	return cc;
 }
@@ -2715,7 +2745,7 @@ HandleAbstractNode lnot(HandleAstContext hCtx, HandleAbstractNode expr)
 HandleAbstractNode lor(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAbstractNode expr2)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->lor(*expr1, *expr2);
+	*cc = hCtx->get()->lor(*expr1, *expr2);
 
 	return cc;
 }
@@ -2723,7 +2753,7 @@ HandleAbstractNode lor(HandleAstContext hCtx, HandleAbstractNode expr1, HandleAb
 HandleAbstractNode reference(HandleAstContext hCtx, HandleSharedSymbolicExpression expr)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->reference(*expr);
+	*cc = hCtx->get()->reference(*expr);
 
 	return cc;
 }
@@ -2731,7 +2761,7 @@ HandleAbstractNode reference(HandleAstContext hCtx, HandleSharedSymbolicExpressi
 HandleAbstractNode string(HandleAstContext hCtx, char * value)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->string(value);
+	*cc = hCtx->get()->string(value);
 
 	return cc;
 }
@@ -2739,7 +2769,7 @@ HandleAbstractNode string(HandleAstContext hCtx, char * value)
 HandleAbstractNode sx(HandleAstContext hCtx, triton::uint32 sizeExt, HandleAbstractNode expr)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->sx(sizeExt,*expr);
+	*cc = hCtx->get()->sx(sizeExt,*expr);
 
 	return cc;
 }
@@ -2747,7 +2777,7 @@ HandleAbstractNode sx(HandleAstContext hCtx, triton::uint32 sizeExt, HandleAbstr
 HandleAbstractNode variable(HandleAstContext hCtx, HandleSharedSymbolicVariable symVar)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->variable(*symVar);
+	*cc = hCtx->get()->variable(*symVar);
 
 	return cc;
 }
@@ -2755,42 +2785,42 @@ HandleAbstractNode variable(HandleAstContext hCtx, HandleSharedSymbolicVariable 
 HandleAbstractNode zx(HandleAstContext hCtx, triton::uint32 sizeExt, HandleAbstractNode expr)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->zx(sizeExt, *expr);
+	*cc = hCtx->get()->zx(sizeExt, *expr);
 
 	return cc;
 }
 
 void initVariable(HandleAstContext hCtx, char * name, triton::uint64 value, HandleAbstractNode node)
 {
-	hCtx->initVariable(name,value,*node);
+	hCtx->get()->initVariable(name,value,*node);
 }
 
 void updateVariable(HandleAstContext hCtx, char * name, triton::uint64 value)
 {
-	hCtx->updateVariable(name, value);
+	hCtx->get()->updateVariable(name, value);
 }
 
 HandleAbstractNode getVariableNode(HandleAstContext hCtx, char * name)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = hCtx->getVariableNode(name);
+	*cc = hCtx->get()->getVariableNode(name);
 
 	return cc;
 }
 
 triton::uint64 getVariableValue(HandleAstContext hCtx, char * varName)
 {
-	return (uint64) hCtx->getVariableValue(varName);
+	return (uint64) hCtx->get()->getVariableValue(varName);
 }
 
 void setRepresentationMode(HandleAstContext hCtx, triton::uint32 mode)
 {
-	hCtx->setRepresentationMode(mode);
+	hCtx->get()->setRepresentationMode(mode);
 }
 
 triton::uint32 getRepresentationMode(HandleAstContext hCtx)
 {
-	return hCtx->getRepresentationMode();
+	return hCtx->get()->getRepresentationMode();
 }
 
 
@@ -2798,10 +2828,10 @@ triton::uint32 getRepresentationMode(HandleAstContext hCtx)
 
 HandleAbstractNode Node_Create(triton::ast::ast_e type, HandleAstContext ctxt)
 {
-	/*auto a = &AbstractNode(type, *ctxt);
-	auto s = &a->shared_from_this();
-*/
-	return NULL;
+	HandleAbstractNode ss = new std::shared_ptr<triton::ast::AbstractNode>;
+	
+	return ss;
+	
 }
 
 void Node_Delete(HandleAbstractNode Handle)
@@ -2953,7 +2983,8 @@ void AstToStr(HandleAbstractNode node,char * &sOut)
 {
 	std::ostringstream stream;
 	
-	(*node).get()->getContext().print(stream, (*node).get());
+	(*node).get()->getContext()->print(stream, (*node).get());
+
 	std::string str = stream.str();
 	 
     sOut = (char *)malloc(sizeof(char) * str.size() + 1u);

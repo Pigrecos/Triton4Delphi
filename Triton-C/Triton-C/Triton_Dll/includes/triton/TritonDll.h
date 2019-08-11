@@ -18,9 +18,7 @@ using namespace triton::ast;
 
 
 typedef triton::API                   *HandleApi;
-
-typedef std::shared_ptr<triton::ast::AbstractNode> *HandleAbstractNode;
-typedef triton::ast::AbstractNode                  *hAbstractNode;
+typedef triton::ast::AbstractNode     *hAbstractNode;
 
 typedef triton::arch::BitsVector      *HandleBV;
 typedef triton::arch::Register        *HandleReg;
@@ -29,10 +27,11 @@ typedef triton::arch::Immediate       *HandleImmediate;
 typedef triton::arch::CpuInterface    *HandleCpuInterface;
 typedef triton::arch::Instruction     *HandleInstruz;
 typedef triton::arch::OperandWrapper  *HandleOperandWrapper;
-
-typedef triton::modes::Modes                            *hModes;
 typedef triton::ast::representations::AstRepresentation *hAstRepresentation;
-typedef triton::ast::AstContext                         *HandleAstContext;
+
+typedef std::shared_ptr<triton::ast::AbstractNode>      *HandleAbstractNode;
+typedef std::shared_ptr<triton::modes::Modes>           *hModes;
+typedef SharedAstContext                                *HandleAstContext;
 
 typedef triton::engines::solver::SolverInterface                      *HandleSolverInterface;
 typedef triton::engines::solver::SolverModel                          *HandleSolverModel;
@@ -80,7 +79,7 @@ struct _Reg {
 	_BV        BitVec;
 };
 
-struct _memAccess {
+struct _memAccess{
     uint64             address;
     uint64             pcRelative;
     HandleReg          segmentReg;

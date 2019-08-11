@@ -2,11 +2,38 @@ unit Ir;
 
 (* Output:
 ##
-## [slicing] 0x40058b: movzx eax, byte ptr [rax]
-## [slicing] 0x40058e: movsx eax, al
-## [slicing] 0x400591: sub eax, 1
-## [slicing] 0x400594: xor eax, 0x55
-## [slicing] 0x400597: mov ecx, eax
+0x400000: mov rax, qword ptr [rip + 0x13b8]
+   (define-fun ref!0 () (_ BitVec 64) (concat (_ bv0 8) (_ bv0 8) (_ bv0 8) (_ bv0 8) (_ bv0 8) (_ bv0 8) (_ bv0 8) (_ bv0 8))) ; MOV operation
+   (define-fun ref!1 () (_ BitVec 64) (_ bv4194311 64)) ; Program Counter
+
+0x400007: lea rsi, [rbx + rax*8]
+   (define-fun ref!2 () (_ BitVec 64) (bvadd (_ bv0 64) (bvadd (_ bv0 64) (bvmul ref!0 (_ bv8 64))))) ; LEA operation
+   (define-fun ref!3 () (_ BitVec 64) (_ bv4194315 64)) ; Program Counter
+
+0x40000b: lea rsi, [ebx + eax*8 + 0xa]
+  (define-fun ref!4 () (_ BitVec 64) ((_ zero_extend 32) (bvadd (_ bv10 32) (bvadd (_ bv0 32) (bvmul ((_ extract 31 0) ref!0) (_ bv8 32)))))) ; LEA operation
+  (define-fun ref!5 () (_ BitVec 64) (_ bv4194321 64)) ; Program Counter
+
+0x400011: pmovmskb edx, xmm1
+  (define-fun ref!6 () (_ BitVec 64) ((_ zero_extend 32) ((_ zero_extend 16) (concat ((_ extract 127 127) (_ bv0 128)) ((_ extract 119 119) (_ bv0 128)) ((_ extract 111 111) (_ bv0 128)) ((_ extract 103 103) (_ bv0 128)) ((_ extract 95 95) (_ bv0 128)) ((_ extract 87 87) (_ bv0 128)) ((_ extract 79 79) (_ bv0 128)) ((_ extract 71 71) (_ bv0 128)) ((_ extract 63 63) (_ bv0 128)) ((_ extract 55 55) (_ bv0 128)) ((_ extract 47 47) (_ bv0 128)) ((_ extract 39 39) (_ bv0 128)) ((_ extract 31 31) (_ bv0 128)) ((_ extract 23 23) (_ bv0 128)) ((_ extract 15 15) (_ bv0 128)) ((_ extract 7 7) (_ bv0 128)))))) ; PMOVMSKB operation
+  (define-fun ref!7 () (_ BitVec 64) (_ bv4194325 64)) ; Program Counter
+
+0x400015: mov eax, edx
+  (define-fun ref!8 () (_ BitVec 64) ((_ zero_extend 32) ((_ extract 31 0) ref!6))) ; MOV operation
+  (define-fun ref!9 () (_ BitVec 64) (_ bv4194327 64)) ; Program Counter
+
+0x400017: xor ah, 0x99
+  (define-fun ref!10 () (_ BitVec 64) (concat ((_ extract 63 16) ref!8) (concat (bvxor ((_ extract 15 8) ref!8) (_ bv153 8)) ((_ extract 7 0) ref!8)))) ; XOR operation
+  (define-fun ref!11 () (_ BitVec 1) (_ bv0 1)) ; Clears carry flag
+  (define-fun ref!12 () (_ BitVec 1) (_ bv0 1)) ; Clears overflow flag
+  (define-fun ref!13 () (_ BitVec 1) (bvxor (bvxor (bvxor (bvxor (bvxor (bvxor (bvxor (bvxor (_ bv1 1) ((_ extract 0 0) (bvlshr ((_ extract 15 8) ref!10) (_ bv0 8)))) ((_ extract 0 0) (bvlshr ((_ extract 15 8) ref!10) (_ bv1 8)))) ((_ extract 0 0) (bvlshr ((_ extract 15 8) ref!10) (_ bv2 8)))) ((_ extract 0 0) (bvlshr ((_ extract 15 8) ref!10) (_ bv3 8)))) ((_ extract 0 0) (bvlshr ((_ extract 15 8) ref!10) (_ bv4 8)))) ((_ extract 0 0) (bvlshr ((_ extract 15 8) ref!10) (_ bv5 8)))) ((_ extract 0 0) (bvlshr ((_ extract 15 8) ref!10) (_ bv6 8)))) ((_ extract 0 0) (bvlshr ((_ extract 15 8) ref!10) (_ bv7 8))))) ; Parity flag
+  (define-fun ref!14 () (_ BitVec 1) ((_ extract 15 15) ref!10)) ; Sign flag
+  (define-fun ref!15 () (_ BitVec 1) (ite (= ((_ extract 15 8) ref!10) (_ bv0 8)) (_ bv1 1) (_ bv0 1))) ; Zero flag
+  (define-fun ref!16 () (_ BitVec 64) (_ bv4194330 64)) ; Program Counter
+
+0x40001a: vmovdqa ymm1, ymm2
+  (define-fun ref!17 () (_ BitVec 512) ((_ zero_extend 256) (_ bv0 256))) ; VMOVDQA operation
+  (define-fun ref!18 () (_ BitVec 64) (_ bv4194334 64)) ; Program Counter
 *)
 
 interface
