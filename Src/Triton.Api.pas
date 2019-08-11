@@ -15,6 +15,7 @@ interface
         Triton.OperandWrapper,
         Triton.AstContext,
         Triton.SymbolicExpression,
+        Triton.SymbolicVariable,
         Triton.pathConstraint,
         Triton.Core;
 
@@ -55,12 +56,12 @@ type
         std::set<const triton::arch::Register*> getParentRegisters(void) const;   }
         function   getConcreteMemoryValue(addr: uint64; execCallbacks : Boolean = true):uint8; overload;
         function   getConcreteMemoryValue(mem: MemAccess; execCallbacks : Boolean = true): uint64; overload;
-        function   getConcreteMemoryAreaValue(baseAddr: uint64; size: usize; execCallbacks : Boolean = true):retArray;
+        function   getConcreteMemoryAreaValue(baseAddr: uint64; size: usize; execCallbacks : Boolean = true):TArray<Byte>;
         function   getConcreteRegisterValue(reg: Registro; execCallbacks : Boolean = true): uint64;
         procedure  setConcreteMemoryValue(addr: uint64; value: uint8); overload;
         procedure  setConcreteMemoryValue(mem: MemAccess; value: uint64); overload;
         procedure  setConcreteMemoryAreaValue(baseAddr : uint64; values: array of Byte); overload;
-        procedure  setConcreteMemoryAreaValue(baseAddr: uint64; area : PByte;  size: usize); overload;
+        procedure  setConcreteMemoryAreaValue(baseAddr: uint64; area : array of Byte;  size: usize); overload;
         procedure  setConcreteRegisterValue(reg: Registro; value: uint64);
         function   isMemoryMapped(baseAddr: uint64;  size : usize = 1): Boolean;
         procedure  unmapMemory(baseAddr: uint64;  size : usize = 1);
@@ -99,17 +100,17 @@ type
         (* Symbolic engine API ========= *)
         procedure checkSymbolic ;
         function  getSymbolicEngine: HandleSymbolicEngine;
-        function  getSymbolicRegisters: mSymbolicExpReg;
+        function  getSymbolicRegisters: TDictionary<register_e,symbolicExp>;
         function  getSymbolicRegister(reg: Registro):symbolicExp ;
-        function  getSymbolicMemory: mSymbolicExpMem ; overload;
+        function  getSymbolicMemory: TDictionary<UInt64,symbolicExp>;  overload;
         function  getSymbolicMemory(addr: uint64 ):symbolicExp ; overload;
         function  getSymbolicMemoryValue(address: uint64): uint8; overload;
         function  getSymbolicMemoryValue(mem: MemAccess): uint64; overload;
-        function  getSymbolicMemoryAreaValue(baseAddr: uint64;size: usize): retArray;
+        function  getSymbolicMemoryAreaValue(baseAddr: uint64;size: usize): TArray<Byte>;
         function  getSymbolicRegisterValue(reg: Registro): uint64;
-        function  convertExpressionToSymbolicVariable(exprId: usize; symVarSize: uint32; symVarComment: PAnsiChar = nil): HandleSharedSymbolicVariable;
-        function  convertMemoryToSymbolicVariable(mem: MemAccess;  symVarComment: PAnsiChar = nil): HandleSharedSymbolicVariable;
-        function  convertRegisterToSymbolicVariable(reg: Registro;  symVarComment : PAnsiChar = nil): HandleSharedSymbolicVariable;
+        function  convertExpressionToSymbolicVariable(exprId: usize; symVarSize: uint32; symVarComment: AnsiString = ''): HandleSharedSymbolicVariable;
+        function  convertMemoryToSymbolicVariable(mem: MemAccess;  symVarComment: AnsiString = ''): HandleSharedSymbolicVariable;
+        function  convertRegisterToSymbolicVariable(reg: Registro;  symVarComment : AnsiString = ''): HandleSharedSymbolicVariable;
         function  getOperandAst(op: OpWrapper): HandleAbstractNode; overload;
         function  getOperandAst(inst: Istruzione ; op: OpWrapper):HandleAbstractNode; overload;
         function  getImmediateAst(imm: Immediate): HandleAbstractNode;overload;
@@ -118,20 +119,20 @@ type
         function  getMemoryAst(inst: Istruzione ; mem: MemAccess):HandleAbstractNode;overload;
         function  getRegisterAst(reg: Registro):HandleAbstractNode; overload;
         function  getRegisterAst(inst: Istruzione ; reg: Registro):HandleAbstractNode; overload;
-        function  newSymbolicExpression(node: HandleAbstractNode; comment: PAnsiChar = nil):symbolicExp;
-        function  newSymbolicVariable(varSize: uint32; comment: PAnsiChar = nil):HandleSharedSymbolicVariable;
+        function  newSymbolicExpression(node: HandleAbstractNode; comment: AnsiString = ''):symbolicExp;
+        function  newSymbolicVariable(varSize: uint32; comment: AnsiString = ''):HandleSharedSymbolicVariable;
         procedure removeSymbolicExpression(symExprId: usize);
-        function  createSymbolicExpression(inst: Istruzione ; node: HandleAbstractNode; dst: OpWrapper; comment : PAnsiChar = nil):symbolicExp;
-        function  createSymbolicMemoryExpression(inst: Istruzione ; node: HandleAbstractNode; mem: MemAccess; comment: PAnsiChar = nil):symbolicExp;
-        function  createSymbolicRegisterExpression(inst: Istruzione ; node: HandleAbstractNode; reg: Registro; comment: PAnsiChar = nil):symbolicExp;
-        function  createSymbolicFlagExpression(inst: Istruzione ; node: HandleAbstractNode; flag: Registro; comment: PAnsiChar = nil):symbolicExp;
-        function  createSymbolicVolatileExpression(inst: Istruzione ; node: HandleAbstractNode; comment: PAnsiChar = nil):symbolicExp;
+        function  createSymbolicExpression(inst: Istruzione ; node: HandleAbstractNode; dst: OpWrapper; comment : AnsiString = ''):symbolicExp;
+        function  createSymbolicMemoryExpression(inst: Istruzione ; node: HandleAbstractNode; mem: MemAccess; comment: AnsiString = ''):symbolicExp;
+        function  createSymbolicRegisterExpression(inst: Istruzione ; node: HandleAbstractNode; reg: Registro; comment: AnsiString = ''):symbolicExp;
+        function  createSymbolicFlagExpression(inst: Istruzione ; node: HandleAbstractNode; flag: Registro; comment: AnsiString = ''):symbolicExp;
+        function  createSymbolicVolatileExpression(inst: Istruzione ; node: HandleAbstractNode; comment: AnsiString = ''):symbolicExp;
         procedure assignSymbolicExpressionToMemory(se:symbolicExp; mem: MemAccess);
         procedure assignSymbolicExpressionToRegister(se:symbolicExp; reg: Registro);
         function  processSimplification(node: HandleAbstractNode; z3: Boolean = false):HandleAbstractNode;
         function  getSymbolicExpressionFromId(symExprId: usize):symbolicExp ;
         function  getSymbolicVariableFromId(symVarId: usize):HandleSharedSymbolicVariable;
-        function  getSymbolicVariableFromName(symVarName: PAnsiChar):HandleSharedSymbolicVariable;
+        function  getSymbolicVariableFromName(symVarName: AnsiString):HandleSharedSymbolicVariable;
         function  getPathConstraints:APathConstraint ;
         function  getPathConstraintsAst:HandleAbstractNode;
         procedure addPathConstraint(inst: Istruzione ; expr: symbolicExp);
@@ -147,10 +148,10 @@ type
         procedure concretizeMemory(mem: MemAccess);overload;
         procedure concretizeMemory(addr: uint64); overload;
         procedure concretizeRegister(reg: Registro);
-        function  sliceExpressions(expr: symbolicExp):mSymbolicExpSlice;
+        function  sliceExpressions(expr: symbolicExp):TDictionary<usize,symbolicExp>;
         function  getTaintedSymbolicExpressions:ListExpr;
-        function  getSymbolicExpressions:mSymbolMap ;
-        function  getSymbolicVariables:mVarMap ;
+        function  getSymbolicExpressions:TDictionary<usize,symbolicExp> ;
+        function  getSymbolicVariables:TDictionary<usize,SymbolicVar> ;
         function  getConcreteVariableValue(symVar:HandleSharedSymbolicVariable):uint64 ;
         procedure setConcreteVariableValue(symVar: HandleSharedSymbolicVariable; value: UInt64);
         (* Solver engine API =========== *)
@@ -167,8 +168,8 @@ type
 
         procedure  checkTaint;
         function  getTaintEngine:HandleTaintEngine;
-        function  getTaintedMemory:sAddr ;
-        function  getTaintedRegisters:sReg ;
+        function  getTaintedMemory:TArray<UInt64> ;
+        function  getTaintedRegisters:TArray<Registro> ;
         procedure enableTaintEngine(flag: Boolean);
         function  isTaintEngineEnabled: Boolean ;
         function  isTainted(op:OpWrapper): Boolean ;
@@ -345,44 +346,44 @@ begin
     Triton.Core.concretizeRegister(FHApi,reg)
 end;
 
-function TApi.convertExpressionToSymbolicVariable(exprId: usize; symVarSize: uint32; symVarComment: PAnsiChar): HandleSharedSymbolicVariable;
+function TApi.convertExpressionToSymbolicVariable(exprId: usize; symVarSize: uint32; symVarComment: AnsiString): HandleSharedSymbolicVariable;
 begin
-    Result := Triton.Core.convertExpressionToSymbolicVariable(FHApi,exprId,symVarSize,symVarComment)
+    Result := Triton.Core.convertExpressionToSymbolicVariable(FHApi,exprId,symVarSize,PAnsiChar( symVarComment))
 end;
 
-function TApi.convertMemoryToSymbolicVariable(mem: MemAccess; symVarComment: PAnsiChar): HandleSharedSymbolicVariable;
+function TApi.convertMemoryToSymbolicVariable(mem: MemAccess; symVarComment: AnsiString): HandleSharedSymbolicVariable;
 begin
-    Result := Triton.Core.convertMemoryToSymbolicVariable(FHApi,mem,symVarComment)
+    Result := Triton.Core.convertMemoryToSymbolicVariable(FHApi,mem, PAnsiChar( symVarComment))
 end;
 
-function TApi.convertRegisterToSymbolicVariable(reg: Registro; symVarComment: PAnsiChar): HandleSharedSymbolicVariable;
+function TApi.convertRegisterToSymbolicVariable(reg: Registro; symVarComment: AnsiString ): HandleSharedSymbolicVariable;
 begin
-    Result := Triton.Core.convertRegisterToSymbolicVariable(FHApi,reg,symVarComment)
+    Result := Triton.Core.convertRegisterToSymbolicVariable(FHApi,reg, PAnsiChar(symVarComment))
 end;
 
-function TApi.createSymbolicExpression(inst: Istruzione; node: HandleAbstractNode; dst: OpWrapper; comment: PAnsiChar): symbolicExp;
+function TApi.createSymbolicExpression(inst: Istruzione; node: HandleAbstractNode; dst: OpWrapper; comment: AnsiString): symbolicExp;
 begin
-    Result := symbolicExp (Triton.Core.createSymbolicExpression(FHApi,inst,node,dst,comment) )
+    Result := symbolicExp (Triton.Core.createSymbolicExpression(FHApi,inst,node,dst,PAnsiChar (comment)) )
 end;
 
-function TApi.createSymbolicFlagExpression(inst: Istruzione; node: HandleAbstractNode; flag: Registro; comment: PAnsiChar): symbolicExp;
+function TApi.createSymbolicFlagExpression(inst: Istruzione; node: HandleAbstractNode; flag: Registro; comment: AnsiString): symbolicExp;
 begin
-    Result := symbolicExp (Triton.Core.createSymbolicFlagExpression(FHApi,inst,node,flag,comment) )
+    Result := symbolicExp (Triton.Core.createSymbolicFlagExpression(FHApi,inst,node,flag,PAnsiChar( comment)) )
 end;
 
-function TApi.createSymbolicMemoryExpression(inst: Istruzione; node: HandleAbstractNode; mem: MemAccess; comment: PAnsiChar): symbolicExp;
+function TApi.createSymbolicMemoryExpression(inst: Istruzione; node: HandleAbstractNode; mem: MemAccess; comment: AnsiString): symbolicExp;
 begin
-    Result := symbolicExp (Triton.Core.createSymbolicMemoryExpression(FHApi,inst,node,mem,comment) )
+    Result := symbolicExp (Triton.Core.createSymbolicMemoryExpression(FHApi,inst,node,mem,PAnsiChar (comment)) )
 end;
 
-function TApi.createSymbolicRegisterExpression(inst: Istruzione;node: HandleAbstractNode; reg: Registro; comment: PAnsiChar): symbolicExp;
+function TApi.createSymbolicRegisterExpression(inst: Istruzione;node: HandleAbstractNode; reg: Registro; comment: AnsiString): symbolicExp;
 begin
-    Result := symbolicExp (Triton.Core.createSymbolicRegisterExpression(FHApi,inst,node,reg,comment) )
+    Result := symbolicExp (Triton.Core.createSymbolicRegisterExpression(FHApi,inst,node,reg,PAnsiChar( comment)) )
 end;
 
-function TApi.createSymbolicVolatileExpression(inst: Istruzione; node: HandleAbstractNode; comment: PAnsiChar): symbolicExp;
+function TApi.createSymbolicVolatileExpression(inst: Istruzione; node: HandleAbstractNode; comment: AnsiString): symbolicExp;
 begin
-    Result := symbolicExp (Triton.Core.createSymbolicVolatileExpression(FHApi,inst,node,comment) )
+    Result := symbolicExp (Triton.Core.createSymbolicVolatileExpression(FHApi,inst,node,PAnsiChar( comment)) )
 end;
 
 procedure TApi.disassembly(inst: Istruzione);
@@ -425,9 +426,14 @@ begin
     Result := Triton.Core.getAstRepresentationMode(FHApi)
 end;
 
-function TApi.getConcreteMemoryAreaValue(baseAddr: uint64; size: usize; execCallbacks: Boolean): retArray;
+function TApi.getConcreteMemoryAreaValue(baseAddr: uint64; size: usize; execCallbacks: Boolean): TArray<Byte>;
+var
+  res : PByte;
 begin
-    Result := Triton.Core.getConcreteMemoryAreaValue(FHApi,baseAddr,size,execCallbacks)
+
+    res := Triton.Core.getConcreteMemoryAreaValue(FHApi,baseAddr,size,execCallbacks);
+    SetLength(Result,size);
+    CopyMemory(@Result[0],res,size * SizeOf(uint8));
 end;
 
 function TApi.getConcreteMemoryValue(mem: MemAccess; execCallbacks: Boolean): uint64;
@@ -505,8 +511,6 @@ begin
 
     for i := 0 to n - 1 do
         Result.Add(pOut[i].id, SolverModel (pOut[i].Model) );
-
-
 end;
 
 function TApi.getModels(node: HandleAbstractNode; limit: uint32): TList< TDictionary<UInt32,SolverModel> >;
@@ -527,7 +531,7 @@ begin
      begin
          pAddS := PAddrSolver(pOut[i]);
          dDict := TDictionary<UInt32,SolverModel>.Create;
-         for j := 0 to pAddS[j].numEle -1 do
+         for j := 0 to pAddS[0].numEle -1 do
             dDict.Add(pAddS[j].id, SolverModel (pAddS[j].Model) );
 
          Result.Add(dDict);
@@ -608,14 +612,37 @@ begin
     Result := symbolicExp (Triton.Core.getSymbolicExpressionFromId(FHApi, symExprId) )
 end;
 
-function TApi.getSymbolicExpressions: mSymbolMap;
+function TApi.getSymbolicExpressions: TDictionary<usize,symbolicExp>;
+var
+  n,i  : Integer;
+  pOut : PIdSymExpr ;
 begin
-    Result := Triton.Core.getSymbolicExpressions(FHApi)
+    Result := nil;
+    pOut   := nil;
+    n := Triton.Core.getSymbolicExpressions(FHApi,@pOut);
+
+    if n > 0 then
+       Result := TDictionary<usize,symbolicExp>.Create;
+
+    for i := 0 to n - 1 do
+        Result.Add(pOut[i].id, symbolicExp (pOut[i].SymExpr) );
 end;
 
-function TApi.getSymbolicMemory: mSymbolicExpMem;
+function TApi.getSymbolicMemory: TDictionary<UInt64,symbolicExp>;
+var
+  n,i  : Integer;
+  pOut : PMemSymE ;
 begin
-    Result := Triton.Core.getSymbolicMemory(FHApi)
+    Result := nil;
+    pOut   := nil;
+
+    n  := Triton.Core.getSymbolicMemory(FHApi,@pOut);
+
+    if n > 0 then
+       Result := TDictionary<UInt64,symbolicExp>.Create;
+
+    for i := 0 to n - 1 do
+        Result.Add(pOut[i].mem, symbolicExp (pOut[i].MemSym) )
 end;
 
 function TApi.getSymbolicMemory(addr: uint64): symbolicExp;
@@ -623,9 +650,15 @@ begin
     Result := symbolicExp (Triton.Core.getSymbolicMemoryAddr(FHApi, addr) )
 end;
 
-function TApi.getSymbolicMemoryAreaValue(baseAddr: uint64; size: usize): retArray;
+function TApi.getSymbolicMemoryAreaValue(baseAddr: uint64; size: usize): TArray<Byte>;
+var
+ res : PByte;
 begin
-    Result := Triton.Core.getSymbolicMemoryAreaValue(FHApi,baseAddr,size)
+
+    res := Triton.Core.getSymbolicMemoryAreaValue(FHApi,baseAddr,size)  ;
+
+    SetLength(Result,size);
+    CopyMemory(@Result[0],res,size * SizeOf(uint8));
 end;
 
 function TApi.getSymbolicMemoryValue(address: uint64): uint8;
@@ -643,9 +676,35 @@ begin
    Result := symbolicExp (Triton.Core.getSymbolicRegister(FHApi, reg) )
 end;
 
-function TApi.getSymbolicRegisters: mSymbolicExpReg;
+(*var
+  n,i  : Integer;
+  pOut : PAddrSolver ;
+
 begin
-    Result := Triton.Core.getSymbolicRegisters(FHApi)
+    Result := nil;
+    pOut := nil;
+    n :=  Triton.Core.getModel(FHApi,node,@pOut );
+
+    if n > 0 then
+       Result := TDictionary<UInt32,SolverModel>.Create;
+
+    for i := 0 to n - 1 do
+        Result.Add(pOut[i].id, SolverModel (pOut[i].Model) );
+*)
+function TApi.getSymbolicRegisters: TDictionary<register_e,symbolicExp>;
+var
+  n,i  : Integer;
+  pOut : PRegSymE ;
+begin
+    Result := nil;
+    pOut := nil;
+    n := Triton.Core.getSymbolicRegisters(FHApi,@pOut);
+
+    if n > 0 then
+       Result := TDictionary<register_e,symbolicExp>.Create;
+
+    for i := 0 to n - 1 do
+        Result.Add(pOut[i].regId, symbolicExp (pOut[i].RegSym) );
 end;
 
 function TApi.getSymbolicRegisterValue(reg: Registro): uint64;
@@ -658,24 +717,49 @@ begin
     Result := Triton.Core.getSymbolicVariableFromId(FHApi,symVarId)
 end;
 
-function TApi.getSymbolicVariableFromName(symVarName: PAnsiChar): HandleSharedSymbolicVariable;
+function TApi.getSymbolicVariableFromName(symVarName: AnsiString): HandleSharedSymbolicVariable;
 begin
-    Result := Triton.Core.getSymbolicVariableFromName(FHApi, symVarName)
+    Result := Triton.Core.getSymbolicVariableFromName(FHApi, PAnsiChar(symVarName))
 end;
 
-function TApi.getSymbolicVariables: mVarMap;
+function TApi.getSymbolicVariables: TDictionary<usize,SymbolicVar>;
+var
+  n,i  : Integer;
+  pOut : PIdSymVar ;
 begin
-    Result := Triton.Core.getSymbolicVariables(FHApi)
+    Result := nil;
+    pOut := nil;
+    n := Triton.Core.getSymbolicVariables(FHApi,@ pOut);
+
+    if n > 0 then
+       Result := TDictionary<usize,SymbolicVar>.Create;
+
+    for i := 0 to n - 1 do
+        Result.Add(pOut[i].id, SymbolicVar (pOut[i].SymVar) );
 end;
 
-function TApi.getTaintedMemory: sAddr;
+function TApi.getTaintedMemory: TArray<UInt64> ;
+var
+  n,i : Integer;
+  uAddrs : PUInt64;
 begin
-   Result := Triton.Core.getTaintedMemory(FHApi)
+   uAddrs := nil;
+   n := Triton.Core.getTaintedMemory(FHApi,uAddrs);
+
+   for i := 0 to n - 1 do
+        Result := Result + [ uAddrs[i] ];
 end;
 
-function TApi.getTaintedRegisters: sReg;
+function TApi.getTaintedRegisters: TArray<Registro>;
+var
+  n,i     : Integer;
+  rRegs   : PReg;
 begin
-    Result := Triton.Core.getTaintedRegisters(FHApi)
+    rRegs := nil;
+    n := Triton.Core.getTaintedRegisters(FHApi,rRegs);
+
+    for i := 0 to n - 1 do
+        Result := Result + [ Registro (rRegs[i]) ];
 end;
 
 function TApi.getTaintedSymbolicExpressions: ListExpr;
@@ -798,14 +882,14 @@ begin
    Result := Triton.Core.isTaintEngineEnabled(FHApi)
 end;
 
-function TApi.newSymbolicExpression(node: HandleAbstractNode;comment: PAnsiChar): symbolicExp;
+function TApi.newSymbolicExpression(node: HandleAbstractNode;comment: AnsiString): symbolicExp;
 begin
-    Result := symbolicExp (Triton.Core.newSymbolicExpression(FHApi, node,comment) )
+    Result := symbolicExp (Triton.Core.newSymbolicExpression(FHApi, node,PAnsiChar(comment)) )
 end;
 
-function TApi.newSymbolicVariable(varSize: uint32;comment: PAnsiChar): HandleSharedSymbolicVariable;
+function TApi.newSymbolicVariable(varSize: uint32;comment: AnsiString): HandleSharedSymbolicVariable;
 begin
-    Result := Triton.Core.newSymbolicVariable(FHApi, varSize,comment)
+    Result := Triton.Core.newSymbolicVariable(FHApi, varSize,PAnsiChar(comment))
 end;
 
 function TApi.processCallbacks(kind: callback_e; node: HandleAbstractNode): HandleAbstractNode;
@@ -894,14 +978,14 @@ begin
    Triton.Core.setAstRepresentationMode(FHApi, mode)
 end;
 
-procedure TApi.setConcreteMemoryAreaValue(baseAddr: uint64; area: PByte; size: usize);
+procedure TApi.setConcreteMemoryAreaValue(baseAddr: uint64; area: array of Byte; size: usize);
 begin
-    Triton.Core.setConcreteMemoryAreaValue(FHApi,baseAddr,area, size)
+    Triton.Core.setConcreteMemoryAreaValue(FHApi,baseAddr,@area[0], size)
 end;
 
 procedure TApi.setConcreteMemoryAreaValue(baseAddr: uint64; values: array of Byte);
 begin
-    Triton.Core.setConcreteMemoryAreaValueByte(FHApi, baseAddr,values)
+    setConcreteMemoryAreaValue(baseAddr,values, Length(values))
 end;
 
 procedure TApi.setConcreteMemoryValue(mem: MemAccess; value: uint64);
@@ -944,9 +1028,21 @@ begin
     Result := Triton.Core.setTaintRegister(FHApi, reg, flag)
 end;
 
-function TApi.sliceExpressions(expr: symbolicExp): mSymbolicExpSlice;
+function TApi.sliceExpressions(expr: symbolicExp): TDictionary<usize,symbolicExp>;
+var
+  n,i  : Integer;
+  pOut : PIdSymExpr ;
 begin
-    Result := Triton.Core.sliceExpressions(FHApi, expr)
+    Result := nil;
+    pOut := nil;
+
+    n := Triton.Core.sliceExpressions(FHApi, expr,@pOut);
+
+    if n > 0 then
+       Result := TDictionary<usize,symbolicExp>.Create;
+
+    for i := 0 to n - 1 do
+        Result.Add(pOut[i].id, symbolicExp (pOut[i].SymExpr) );
 end;
 
 function TApi.taintAssignment(op1, op2: OpWrapper): Boolean;

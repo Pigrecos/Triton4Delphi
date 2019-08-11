@@ -360,6 +360,30 @@ end;
 AAddrSolver = array of PAddrSolver;
 PListSolver = ^AAddrSolver;
 
+PIdSymExpr = ^IdSymExpr;
+IdSymExpr = record { //std::map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression> }
+	id      : usize;
+	SymExpr : HandleSharedSymbolicExpression ;
+end;
+
+PIdSymVar = ^IdSymVar;
+IdSymVar = record //std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable>
+	id     : usize;
+	SymVar : HandleSharedSymbolicVariable;
+end;
+
+PRegSymE = ^RegSymE;
+RegSymE = record  //std::map<triton::arch::register_e, triton::engines::symbolic::SharedSymbolicExpression>
+	regId  : register_e;
+	RegSym : HandleSharedSymbolicExpression;
+end;
+
+PMemSymE = ^MemSymE;
+MemSymE = record { //std::map<triton::uint64, triton::engines::symbolic::SharedSymbolicExpression> }
+	mem    : uint64;
+	MemSym : HandleSharedSymbolicExpression;
+end;
+
 PBranch = ^Branch;
 Branch = record  //std::vector<std::tuple<bool, triton::uint64, triton::uint64, HandleAbstractNode>>
 	taken  : Boolean;
@@ -368,20 +392,13 @@ Branch = record  //std::vector<std::tuple<bool, triton::uint64, triton::uint64, 
 	pc     : HandleAbstractNode;
 end;
 ABranch = array of Branch;
-
-sAddr               = Pointer;   //std::set<triton::uint64>
-sReg                = Pointer;   //std::set<const triton::arch::Register*>
-
-mSymbolicExpReg                = Pointer;  //std::map<triton::arch::register_e, triton::engines::symbolic::SharedSymbolicExpression>
-mSymbolicExpMem                = Pointer;  //std::map<triton::uint64, triton::engines::symbolic::SharedSymbolicExpression>
-mSymbolicExpSlice              = Pointer;  //std::map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression
-ListExpr                       = Pointer;  //std::list<triton::engines::symbolic::SharedSymbolicExpression>
-mSymbolMap                     = Pointer;  //std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression>
-mVarMap                        = Pointer;  //std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable>
-
 PHandlePathConstraint = ^HandlePathConstraint;
 
-retArray            = PByte;    //uint8 *
+PReg      = ^HandleReg;
+
+ListExpr            = Pointer;  //std::list<triton::engines::symbolic::SharedSymbolicExpression>
+
+
 
 (**********************************************************************)
 

@@ -284,10 +284,15 @@ uint64   getConcreteMemoryValue(HandleApi Handle, HandleMemAcc mem, bool execCal
 
 //! [**architecture api**] - Returns the concrete value of a memory area.
 retArray   getConcreteMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr, triton::usize size, bool execCallbacks )
-{
-
+{	
 	std::vector<triton::uint8> v = Handle->getConcreteMemoryAreaValue(baseAddr, size, execCallbacks);
-	return &v[0];
+
+	uint8* result = new uint8[size];
+
+	memcpy(result, &v.front(), v.size() * sizeof(uint8));
+	
+	
+	return result;
 }
 
 //! [**architecture api**] - Returns the concrete value of a register. // not support 512
@@ -305,11 +310,6 @@ void  setConcreteMemoryValueByte(HandleApi Handle, triton::uint64 addr, triton::
 void  setConcreteMemoryValue(HandleApi Handle, HandleMemAcc mem, triton::uint64 value)
 {
 	Handle->setConcreteMemoryValue(*mem, value);
-}
-
-void  setConcreteMemoryAreaValueByte(HandleApi Handle, triton::uint64 baseAddr, std::vector<triton::uint8> values)
-{
-	Handle->setConcreteMemoryAreaValue(baseAddr, values);
 }
 
 void  setConcreteMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr, triton::uint8* area, triton::usize size)
@@ -512,17 +512,94 @@ HandleSymbolicEngine getSymbolicEngine(HandleApi Handle)
 	return Handle->getSymbolicEngine();
 }
 
-mSymbolicExpReg getSymbolicRegisters(HandleApi Handle)
-{
-	
-	std::map<triton::arch::register_e, triton::engines::symbolic::SharedSymbolicExpression> static s = Handle->getSymbolicRegisters();
-	return &s;
+uint32 mapRegEToArray(std::map<triton::arch::register_e, triton::engines::symbolic::SharedSymbolicExpression> mregE, RegSymE **OutRegE)
+{	
+	auto   n = mregE.size();
+
+	if (n < 1) return 0;
+
+	RegSymE* a = new RegSymE[n];
+	RegSymE* newA = NULL;
+
+	auto i = 0;
+	for (auto elem : mregE) {
+		a[i].regId  = elem.first;
+		a[i].RegSym = &elem.second;
+
+		triton::engines::symbolic::SharedSymbolicExpression* x = new triton::engines::symbolic::SharedSymbolicExpression;
+		memcpy(x, &elem.second, sizeof(triton::engines::symbolic::SharedSymbolicExpression));
+
+		a[i].RegSym = *&x;
+		i++;
+	}
+
+	newA = (RegSymE*)realloc(*OutRegE, sizeof(RegSymE)*n);
+
+	if (newA) {
+		memcpy(newA, a, sizeof(RegSymE)*n);
+
+		*OutRegE = newA;
+	}
+	else {
+		memcpy(*OutRegE, a, sizeof(RegSymE)*n);
+	}
+
+	delete a;
+
+	return (uint32)n;
 }
 
-mSymbolicExpMem  getSymbolicMemory(HandleApi Handle)
+uint32 getSymbolicRegisters(HandleApi Handle, RegSymE **OutRegE)
+{
+	std::map<triton::arch::register_e, triton::engines::symbolic::SharedSymbolicExpression> s = Handle->getSymbolicRegisters();
+	auto   n = mapRegEToArray(s, OutRegE);
+
+	return n;
+}
+
+uint32 mMemToArray(std::map<triton::uint64, triton::engines::symbolic::SharedSymbolicExpression> mMemSym, MemSymE **ouMemSym)
+{	
+	auto   n = mMemSym.size();
+
+	if (n < 1) return 0;
+
+	MemSymE* a = new MemSymE[n];
+	MemSymE* newA = NULL;
+
+	auto i = 0;
+	for (auto elem : mMemSym) {
+		a[i].mem    = elem.first;
+		a[i].MemSym = &elem.second;
+
+		triton::engines::symbolic::SharedSymbolicExpression* x = new triton::engines::symbolic::SharedSymbolicExpression;
+		memcpy(x, &elem.second, sizeof(triton::engines::symbolic::SharedSymbolicExpression));
+
+		a[i].MemSym = *&x;
+		i++;
+	}
+
+	newA = (MemSymE*)realloc(*ouMemSym, sizeof(MemSymE)*n);
+
+	if (newA) {
+		memcpy(newA, a, sizeof(MemSymE)*n);
+
+		*ouMemSym = newA;
+	}
+	else {
+		memcpy(*ouMemSym, a, sizeof(MemSymE)*n);
+	}
+
+	delete a;
+
+	return (uint32)n;
+}
+
+uint32 EXPORTCALL  getSymbolicMemory(HandleApi Handle, MemSymE **ouMemSym)
 {
 	static auto s = Handle->getSymbolicMemory();
-	return &s;
+	auto   n = mMemToArray(s, ouMemSym);
+
+	return n;
 }
 
 HandleSharedSymbolicExpression getSymbolicMemoryAddr(HandleApi Handle, triton::uint64 addr)
@@ -554,7 +631,13 @@ uint64 getSymbolicMemoryValueM(HandleApi Handle, HandleMemAcc mem)
 retArray getSymbolicMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr, triton::usize size)
 {
 	std::vector<triton::uint8> v = Handle->getSymbolicMemoryAreaValue(baseAddr, size);
-	return &v[0];
+
+	uint8* result = new uint8[size];
+
+	memcpy(result, &v.front(), v.size() * sizeof(uint8));
+
+
+	return result;
 }
 
 uint64 getSymbolicRegisterValue(HandleApi Handle, HandleReg reg)
@@ -895,10 +978,49 @@ void concretizeRegister(HandleApi Handle, HandleReg reg)
 	Handle->concretizeRegister(*reg);
 }
 
-mSymbolicExpSlice sliceExpressions(HandleApi Handle, HandleSharedSymbolicExpression expr)
+uint32 mSliceToArray(std::map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression> mslice, IdSymExpr **outSlice)
+{	
+	auto   n = mslice.size();
+
+	if (n < 1) return 0;
+
+	IdSymExpr* a = new IdSymExpr[n];
+	IdSymExpr* newA = NULL;
+
+	auto i = 0;
+	for (auto elem : mslice) {
+		a[i].id = elem.first;
+		a[i].SymExpr = &elem.second;
+
+		triton::engines::symbolic::SharedSymbolicExpression* x = new triton::engines::symbolic::SharedSymbolicExpression;
+		memcpy(x, &elem.second, sizeof(triton::engines::symbolic::SharedSymbolicExpression));
+
+		a[i].SymExpr = *&x;
+		i++;
+	}
+
+	newA = (IdSymExpr*)realloc(*outSlice, sizeof(IdSymExpr)*n);
+
+	if (newA) {
+		memcpy(newA, a, sizeof(IdSymExpr)*n);
+
+		*outSlice = newA;
+	}
+	else {
+		memcpy(*outSlice, a, sizeof(IdSymExpr)*n);
+	}
+
+	delete a;
+
+	return (uint32)n;
+}
+
+uint32 sliceExpressions(HandleApi Handle, HandleSharedSymbolicExpression expr, IdSymExpr **outSlice)
 {
-	static auto s = Handle->sliceExpressions(*expr);
-	return &s;
+	auto s = Handle->sliceExpressions(*expr);
+	auto   n = mSliceToArray(s, outSlice);
+
+	return n;
 }
 
 ListExpr getTaintedSymbolicExpressions(HandleApi Handle)
@@ -907,16 +1029,94 @@ ListExpr getTaintedSymbolicExpressions(HandleApi Handle)
 	return &s;
 }
 
-mSymbolMap getSymbolicExpressions(HandleApi Handle)
+uint32 mSymToArray(std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression> mslice, IdSymExpr **outSlice)
 {
-	static auto s = Handle->getSymbolicExpressions();
-	return &s;
+	auto   n = mslice.size();
+
+	if (n < 1) return 0;
+
+	IdSymExpr* a = new IdSymExpr[n];
+	IdSymExpr* newA = NULL;
+
+	auto i = 0;
+	for (auto elem : mslice) {
+		a[i].id = elem.first;
+		a[i].SymExpr = &elem.second;
+
+		triton::engines::symbolic::SharedSymbolicExpression* x = new triton::engines::symbolic::SharedSymbolicExpression;
+		memcpy(x, &elem.second, sizeof(triton::engines::symbolic::SharedSymbolicExpression));
+
+		a[i].SymExpr = *&x;
+		i++;
+	}
+
+	newA = (IdSymExpr*)realloc(*outSlice, sizeof(IdSymExpr)*n);
+
+	if (newA) {
+		memcpy(newA, a, sizeof(IdSymExpr)*n);
+
+		*outSlice = newA;
+	}
+	else {
+		memcpy(*outSlice, a, sizeof(IdSymExpr)*n);
+	}
+
+	delete a;
+
+	return (uint32)n;
 }
 
-mVarMap getSymbolicVariables(HandleApi Handle)
+uint32 getSymbolicExpressions(HandleApi Handle, IdSymExpr **outSymMap)
 {
-	std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable> static m = Handle->getSymbolicVariables();
-	return &m;
+	static auto s = Handle->getSymbolicExpressions();
+	auto   n = mSymToArray(s, outSymMap);
+
+	return n;
+}
+
+uint32 mSymVarToArray(std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable> mSymVar, IdSymVar **outSymVar)
+{
+	auto   n = mSymVar.size();
+
+	if (n < 1) return 0;
+
+	IdSymVar* a = new IdSymVar[n];
+	IdSymVar* newA = NULL;
+
+	auto i = 0;
+	for (auto elem : mSymVar) {
+		a[i].id = elem.first;
+		a[i].SymVar = &elem.second;
+
+		triton::engines::symbolic::SharedSymbolicVariable* x = new triton::engines::symbolic::SharedSymbolicVariable;
+		memcpy(x, &elem.second, sizeof(triton::engines::symbolic::SharedSymbolicVariable));
+
+		a[i].SymVar = *&x;
+		i++;
+	}
+
+	newA = (IdSymVar*)realloc(*outSymVar, sizeof(IdSymVar)*n);
+
+	if (newA) {
+		memcpy(newA, a, sizeof(IdSymVar)*n);
+
+		*outSymVar = newA;
+	}
+	else {
+		memcpy(*outSymVar, a, sizeof(IdSymVar)*n);
+	}
+
+	delete a;
+
+	return (uint32)n;
+}
+
+uint32  getSymbolicVariables(HandleApi Handle, IdSymVar **outSymVar)
+{
+	std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable> m = Handle->getSymbolicVariables();
+	auto   n = mSymVarToArray(m, outSymVar);
+
+	return n;
 }
 
 uint64 getConcreteVariableValue(HandleApi Handle, HandleSharedSymbolicVariable symVar)
@@ -1075,16 +1275,48 @@ HandleTaintEngine getTaintEngine(HandleApi Handle)
 	return Handle->getTaintEngine();
 }
 
-sAddr getTaintedMemory(HandleApi Handle)
+uint32 getTaintedMemory(HandleApi Handle, uint64 *& outMemAddrs)
 {
-	std::set<triton::uint64> static s = Handle->getTaintedMemory();
-	return &s;
+	std::set<triton::uint64> s = Handle->getTaintedMemory();
+	size_t n = s.size();
+		
+	if (s.size() < 1) return 0;
+
+	outMemAddrs = new uint64[n];
+
+	std::vector<uint64> v(n);
+	std::copy(s.begin(), s.end(), v.begin()); ;
+	
+	for (int i = 0; i < n; i++)
+	{
+		outMemAddrs[i] = v[i];
+	};
+
+	
+	return (uint32)n;
 }
 
-sReg getTaintedRegisters(HandleApi Handle)
+uint32 getTaintedRegisters(HandleApi Handle, HandleReg*& outRegs)
 {
-	std::set<const triton::arch::Register*> static r = Handle->getTaintedRegisters();
-	return &r;
+	std::set<const triton::arch::Register*> r = Handle->getTaintedRegisters();
+	size_t n = r.size();
+
+	if (r.size() < 1) return 0;
+
+	outRegs = new HandleReg[n];
+	
+	auto i = 0;
+	for (auto elem: r)
+	{
+		triton::arch::Register* reg = new triton::arch::Register;
+		memcpy(&reg, &elem, sizeof(triton::arch::Register));
+
+		outRegs[i] = &*reg; 
+		i++;
+	};
+
+
+	return (uint32)n;
 }
 
 void enableTaintEngine(HandleApi Handle, bool flag)

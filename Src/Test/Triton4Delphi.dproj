@@ -162,6 +162,9 @@
         <DCCReference Include="..\Triton.pathConstraint.pas"/>
         <DCCReference Include="proving_opaque_predicates.pas"/>
         <DCCReference Include="code_coverage_crackme_xor.pas"/>
+        <DCCReference Include="forward_tainting.pas"/>
+        <DCCReference Include="backward_slicing.pas"/>
+        <DCCReference Include="Ir.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

@@ -39,32 +39,59 @@ object Form1: TForm1
     Height = 38
     Align = alBottom
     TabOrder = 1
-    object btn1: TBitBtn
+    object btnStandard_test: TBitBtn
       Left = 1016
       Top = 6
       Width = 85
       Height = 25
       Caption = 'Standard start '
       TabOrder = 0
-      OnClick = btn1Click
+      OnClick = btnStandard_testClick
     end
-    object btn2: TBitBtn
+    object btnOp_Pre: TBitBtn
       Left = 840
       Top = 6
       Width = 155
       Height = 25
       Caption = 'Opaque predicates test'
       TabOrder = 1
-      OnClick = btn2Click
+      OnClick = btnOp_PreClick
     end
-    object btn3: TBitBtn
-      Left = 664
+    object btnCoverage: TBitBtn
+      Left = 120
       Top = 6
       Width = 155
       Height = 25
       Caption = 'code_coverage test'
       TabOrder = 2
-      OnClick = btn3Click
+      OnClick = btnCoverageClick
+    end
+    object btnTaint: TBitBtn
+      Left = 656
+      Top = 6
+      Width = 155
+      Height = 25
+      Caption = 'forward_tainting test'
+      TabOrder = 3
+      OnClick = btnTaintClick
+    end
+    object btnslicing: TBitBtn
+      Left = 480
+      Top = 6
+      Width = 155
+      Height = 25
+      Caption = 'backward slicing test'
+      TabOrder = 4
+      OnClick = btnslicingClick
+    end
+    object btnIr: TBitBtn
+      Left = 304
+      Top = 6
+      Width = 155
+      Height = 25
+      Caption = 'Ir test'
+      TabOrder = 5
+      OnClick = btnIrClick
     end
   end
 end

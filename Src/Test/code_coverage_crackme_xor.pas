@@ -160,7 +160,6 @@ begin
     // Setup stack on an abitrary address.
     Triton.setConcreteRegisterValue( Triton.getRegister(ID_REG_X86_RSP), $7fffffff);
     Triton.setConcreteRegisterValue( Triton.getRegister(ID_REG_X86_RBP), $7fffffff);
-
 end;
 
 // This function returns a set of new inputs based on the last trace.
@@ -190,6 +189,7 @@ begin
 
     // We start with any input. T (Top)
     previousConstraints := astCtxt.equal( astCtxt.bvtrue, astCtxt.bvtrue) ;
+    var d : AnsiString := previousConstraints.ToStr;
 
     // Go through the path constraints
     for pc in pco do
@@ -206,12 +206,12 @@ begin
                 begin
                     // Ask for a model
                     models := Triton.getModel( astCtxt.land( previousConstraints, br.pc) );
-                    Form1.Log( 'node: '+ abstractnode(br.pc).ToStr );
-                    Form1.Log( 'previousConstraints: '+ previousConstraints.ToStr );
                     seed   := TDictionary<UInt64,UInt64>.Create;
                     for n in models do
                     begin
-                        Form1.Log(n.Value.ToStr);
+                        symVar := symbolicVar( Triton.getSymbolicVariableFromId(n.Key) );
+
+                        Form1.Log( Format('      SymVar %d (%s) = j $%x',[n.Key,symVar.Comment,n.Value.Value]) );
                         // Get the symbolic variable assigned to the model
                         symVar := symbolicVar( Triton.getSymbolicVariableFromId(n.Key) );
                         // Save the new input as seed.
@@ -234,18 +234,25 @@ end;
 procedure symbolizeInputs(seed: TDictionary<UInt64,UInt64>);
 var
  n       : TPair<UInt64,UInt64>;
- m1,m2   : MemAccess;
+ m1,m2   : ^MemAccess;
+
 begin
     // Clean symbolic state
     Triton.concretizeAllRegister;
     Triton.concretizeAllMemory;
+
     for n in seed do
     begin
-        m1.Create(n.Key,   BYTE_SIZE);
-        m2.Create(n.Key+1, BYTE_SIZE);
+        New(m1);
+        New(m2);
+
+        m1^.Create(n.Key,   BYTE_SIZE);
+        m2^.Create(n.Key+1, BYTE_SIZE);
+
         Triton.setConcreteMemoryValue(n.Key,n.Value);
-        Triton.convertMemoryToSymbolicVariable( m1 ) ;
-        Triton.convertMemoryToSymbolicVariable( m2 );
+        Triton.convertMemoryToSymbolicVariable( m1^, 'm1' );
+        Triton.convertMemoryToSymbolicVariable( m2^ ,'m2');
+
     end;
 end;
 
@@ -259,6 +266,7 @@ var
   lastInput  : TList< TDictionary<UInt64,UInt64> > ;
   worklist   : TList< TDictionary<UInt64,UInt64> > ;
   newInputs  : TList< TDictionary<UInt64,UInt64> >;
+
 begin
     Triton.Create;
 
@@ -286,6 +294,7 @@ begin
     while worklist.Count >0 do
     begin
 
+        // Take the first seed
         seed := worklist.Items[0];
 
         for i := 0 to Length(seed.Keys.ToArray) - 1 do

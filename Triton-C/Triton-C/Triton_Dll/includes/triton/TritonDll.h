@@ -42,18 +42,11 @@ typedef triton::engines::symbolic::SharedSymbolicVariable             *HandleSha
 typedef triton::engines::symbolic::PathConstraint                     *HandlePathConstraint;
 typedef triton::engines::taint::TaintEngine                           *HandleTaintEngine;
 
+typedef uint8 * retArray;
+
+
 /*=======todo porting for c or pascal*/
-typedef std::list<triton::engines::symbolic::SharedSymbolicExpression>                          *ListExpr;
-
-typedef std::map<triton::arch::register_e, triton::engines::symbolic::SharedSymbolicExpression> *mSymbolicExpReg;
-typedef std::map<triton::uint64, triton::engines::symbolic::SharedSymbolicExpression>           *mSymbolicExpMem;
-typedef std::map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression>            *mSymbolicExpSlice;
-
-typedef std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression>  *mSymbolMap;
-typedef std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable>    *mVarMap;
-
-typedef std::set<triton::uint64>                *sAddr;
-typedef std::set<const triton::arch::Register*> *sReg;
+typedef std::list<triton::engines::symbolic::SharedSymbolicExpression>      *ListExpr;
 /*=======end todo porting for c or pascal*/
 
 typedef ComparableFunctor<void(triton::API&, const triton::arch::MemoryAccess&)>                                 *cbGetMemVal;
@@ -61,8 +54,6 @@ typedef ComparableFunctor<void(triton::API&, const triton::arch::Register&)>    
 typedef ComparableFunctor<void(triton::API&, const triton::arch::MemoryAccess&, const triton::uint512& value)>   *cbSetMemVal;
 typedef ComparableFunctor<void(triton::API&, const triton::arch::Register&,     const triton::uint512& value)>   *cbSetRegVal;
 typedef ComparableFunctor<triton::ast::SharedAbstractNode(triton::API&, const triton::ast::SharedAbstractNode&)> *cbSimplification;
-
-typedef uint8 * retArray;
 
 struct _BV {
 	uint32    high;
@@ -148,6 +139,22 @@ struct  AddrSolver { //std::map<triton::uint32, triton::engines::solver::SolverM
 	uint32            numEle;
 	uint32            id;
 	HandleSolverModel Model;
+};
+struct  IdSymExpr { //std::map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression>
+	usize                          id;
+	HandleSharedSymbolicExpression SymExpr;
+};
+struct  IdSymVar { //std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable>
+	usize                          id;
+	HandleSharedSymbolicVariable   SymVar;
+};
+struct  RegSymE { //std::map<triton::arch::register_e, triton::engines::symbolic::SharedSymbolicExpression> 
+	register_e                     regId;
+	HandleSharedSymbolicExpression RegSym;
+};
+struct  MemSymE { //std::map<triton::uint64, triton::engines::symbolic::SharedSymbolicExpression> 
+	uint64                         mem;
+	HandleSharedSymbolicExpression MemSym;
 };
 struct PathDat { //std::vector<std::tuple<bool, triton::uint64, triton::uint64, HandleAbstractNode>>
 	bool   taken;
@@ -240,7 +247,8 @@ extern "C"
 	// not support 512
 	void  EXPORTCALL setConcreteMemoryValue(HandleApi Handle, HandleMemAcc mem, triton::uint64 value);
 	
-	void  EXPORTCALL setConcreteMemoryAreaValueByte(HandleApi Handle, triton::uint64 baseAddr, std::vector<triton::uint8> values);
+	// eliminata -utilizzo setConcreteMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr, triton::uint8* area, triton::usize size)
+	//void  EXPORTCALL setConcreteMemoryAreaValueByte(HandleApi Handle, triton::uint64 baseAddr, triton::uint8* values);
 	
 	void  EXPORTCALL setConcreteMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr, triton::uint8* area, triton::usize size);
 	
@@ -363,10 +371,10 @@ extern "C"
 	HandleSymbolicEngine EXPORTCALL getSymbolicEngine(HandleApi Handle);
 
 	//! [**symbolic api**] - Returns the map of symbolic registers defined.
-	mSymbolicExpReg EXPORTCALL getSymbolicRegisters(HandleApi Handle);
+	uint32 EXPORTCALL getSymbolicRegisters(HandleApi Handle,RegSymE **OutRegE);
 
 	//! [**symbolic api**] - Returns the map (<Addr : SymExpr>) of symbolic memory defined.
-	mSymbolicExpMem EXPORTCALL  getSymbolicMemory(HandleApi Handle) ;
+	uint32 EXPORTCALL  getSymbolicMemory(HandleApi Handle, MemSymE **ouMemSym) ;
 
 	//! [**symbolic api**] - Returns the shared symbolic expression corresponding to the memory address.
 	HandleSharedSymbolicExpression EXPORTCALL getSymbolicMemoryAddr(HandleApi Handle, triton::uint64 addr) ;
@@ -507,16 +515,16 @@ extern "C"
 	void EXPORTCALL concretizeRegister(HandleApi Handle, HandleReg reg);
 
 	//! [**symbolic api**] - Slices all expressions from a given one.
-	mSymbolicExpSlice EXPORTCALL sliceExpressions(HandleApi Handle, HandleSharedSymbolicExpression expr);
+	uint32 EXPORTCALL sliceExpressions(HandleApi Handle, HandleSharedSymbolicExpression expr, IdSymExpr **outSlice);
 
 	//! [**symbolic api**] - Returns the list of the tainted symbolic expressions.
 	ListExpr EXPORTCALL getTaintedSymbolicExpressions(HandleApi Handle);
 
 	//! [**symbolic api**] - Returns all symbolic expressions as a map of <SymExprId : SymExpr>
-	mSymbolMap EXPORTCALL getSymbolicExpressions(HandleApi Handle) ;
+	uint32 EXPORTCALL getSymbolicExpressions(HandleApi Handle, IdSymExpr **outSymMap) ;
 
 	//! [**symbolic api**] - Returns all symbolic variables as a map of <SymVarId : SymVar>
-	mVarMap EXPORTCALL getSymbolicVariables(HandleApi Handle) ;
+	uint32 EXPORTCALL getSymbolicVariables(HandleApi Handle, IdSymVar **outSymVar) ;
 
 	//! [**symbolic api**] - Gets the concrete value of a symbolic variable.
 	uint64 EXPORTCALL getConcreteVariableValue(HandleApi Handle, HandleSharedSymbolicVariable symVar) ;
@@ -583,10 +591,10 @@ extern "C"
 	HandleTaintEngine EXPORTCALL getTaintEngine(HandleApi Handle);
 
 	//! [**taint api**] - Returns the tainted addresses.
-	sAddr EXPORTCALL getTaintedMemory(HandleApi Handle) ;
+	uint32 EXPORTCALL getTaintedMemory(HandleApi Handle, uint64 *& outMemAddrs);
 
 	//! [**taint api**] - Returns the tainted registers.
-	sReg EXPORTCALL getTaintedRegisters(HandleApi Handle) ;
+	uint32 EXPORTCALL getTaintedRegisters(HandleApi Handle, HandleReg*& outRegs);
 
 	//! [**taint api**] - Enables or disables the taint engine.
 	void EXPORTCALL enableTaintEngine(HandleApi Handle,bool flag);

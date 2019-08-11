@@ -19,7 +19,10 @@ uses
   Triton.SolverModel in '..\Triton.SolverModel.pas',
   Triton.pathConstraint in '..\Triton.pathConstraint.pas',
   proving_opaque_predicates in 'proving_opaque_predicates.pas',
-  code_coverage_crackme_xor in 'code_coverage_crackme_xor.pas';
+  code_coverage_crackme_xor in 'code_coverage_crackme_xor.pas',
+  forward_tainting in 'forward_tainting.pas',
+  backward_slicing in 'backward_slicing.pas',
+  Ir in 'Ir.pas';
 
 {$R *.res}
 

@@ -5,19 +5,25 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons,
-  System.Generics.Collections, Vcl.ExtCtrls;
+  System.Generics.Collections, System.Generics.Defaults, Vcl.ExtCtrls;
 
 type
   TForm1 = class(TForm)
     pnl1: TPanel;
     pnl2: TPanel;
     mmoLog: TMemo;
-    btn1: TBitBtn;
-    btn2: TBitBtn;
-    btn3: TBitBtn;
-    procedure btn1Click(Sender: TObject);
-    procedure btn2Click(Sender: TObject);
-    procedure btn3Click(Sender: TObject);
+    btnStandard_test: TBitBtn;
+    btnOp_Pre: TBitBtn;
+    btnCoverage: TBitBtn;
+    btnTaint: TBitBtn;
+    btnslicing: TBitBtn;
+    btnIr: TBitBtn;
+    procedure btnStandard_testClick(Sender: TObject);
+    procedure btnOp_PreClick(Sender: TObject);
+    procedure btnCoverageClick(Sender: TObject);
+    procedure btnTaintClick(Sender: TObject);
+    procedure btnslicingClick(Sender: TObject);
+    procedure btnIrClick(Sender: TObject);
   private
 
     procedure test6;
@@ -27,6 +33,8 @@ type
     procedure Test_Conversion_01;
     procedure test_istruzione;
     procedure constraint1;
+    procedure test_taint_get_tainted_memory;
+    procedure test_taint_get_tainted_registers;
     { Private declarations }
   public
        procedure Log(msg: string);
@@ -53,7 +61,10 @@ implementation
             Triton.OperandWrapper,
             Triton.Define,
             proving_opaque_predicates,
-            code_coverage_crackme_xor;
+            code_coverage_crackme_xor,
+            forward_tainting,
+            backward_slicing,
+            ir;
 {$R *.dfm}
 
 procedure TForm1.Log(msg: string);
@@ -61,7 +72,7 @@ begin
     mmoLog.Lines.Add(msg)
 end;
 
-procedure TForm1.btn1Click(Sender: TObject);
+procedure TForm1.btnStandard_testClick(Sender: TObject);
 var
   mem1, mem2 : MemAccess;
   vApi       : TApi;
@@ -300,10 +311,23 @@ begin
   test_istruzione;
    Log('') ;
 
+   Log(' Test Taint============');
+     test_taint_get_tainted_memory;
+     test_taint_get_tainted_registers;
+   Log(' End Test Taint============');
+
    Log(' simplification============');
   simplification ;
    Log(' end simplification=============');
    Log('') ;
+
+end;
+
+procedure TForm1.btnTaintClick(Sender: TObject);
+begin
+   mmoLog.Clear;
+   Log('test forward_tainting');
+   main_taint;
 end;
 
 procedure TForm1.test6;
@@ -514,8 +538,17 @@ type
   end;
 
 
-procedure TForm1.btn2Click(Sender: TObject);
+procedure TForm1.btnIrClick(Sender: TObject);
 begin
+    mmoLog.Clear;
+    Log('test Ir');
+    main_Ir
+end;
+
+procedure TForm1.btnOp_PreClick(Sender: TObject);
+begin
+    mmoLog.Clear;
+    Log('test opaque predicates');
     test_trace(trace_1);
     test_trace(trace_2);
     test_trace(trace_3);
@@ -523,7 +556,14 @@ begin
     test_trace(trace_5) ;
 end;
 
-procedure TForm1.btn3Click(Sender: TObject);
+procedure TForm1.btnslicingClick(Sender: TObject);
+begin
+    mmoLog.Clear;
+    Log('test backward slicing');
+    main_slicing;
+end;
+
+procedure TForm1.btnCoverageClick(Sender: TObject);
 begin
     main
 end;
@@ -781,7 +821,88 @@ begin
       Log('');
 
   end;
-  
+
+end;
+
+
+procedure TForm1.test_taint_get_tainted_registers;
+var
+ Triton : TApi;
+ r      : TArray<Registro>;
+ function  assertTrue(v:Registro; regs: TArray<Registro>):Boolean;
+ var
+   FoundIndex : Integer;
+   Comparison : IComparer<Registro>;
+ begin
+     Comparison := TDelegatedComparer<Registro>.Create(
+              function(const Left, Right: Registro): Integer
+              begin
+                Result := Ord(Left.id)-ord(Right.id);
+              end);
+
+     Result :=  TArray.BinarySearch<Registro>(regs,v,FoundIndex,Comparison)
+ end;
+
+begin
+        //Get tainted registers//
+        Triton.Create;
+        Triton.setArchitecture(ARCH_X86_64);
+
+        r := Triton.getTaintedRegisters;
+        assert(Length(r) = 0);
+
+        Triton.taintRegister( Triton.getRegister(ID_REG_X86_EAX)) ;
+        Triton.taintRegister( Triton.getRegister(ID_REG_X86_AX) ) ;
+        Triton.taintRegister( Triton.getRegister(ID_REG_X86_RBX)) ;
+        Triton.taintRegister( Triton.getRegister(ID_REG_X86_CL) ) ;
+        Triton.taintRegister( Triton.getRegister(ID_REG_X86_DI) ) ;
+
+        r := Triton.getTaintedRegisters;
+
+        assert( assertTrue(Triton.getRegister(ID_REG_X86_RAX), r),'Failed rax');
+        assert( assertTrue(Triton.getRegister(ID_REG_X86_RBX), r),'Failed rbx') ;
+        assert( assertTrue(Triton.getRegister(ID_REG_X86_RCX), r),'Failed rcx') ;
+        assert( assertTrue(Triton.getRegister(ID_REG_X86_RDI), r),'Failed rdi') ;
+end;
+
+procedure TForm1.test_taint_get_tainted_memory;
+var
+ Triton : TApi;
+ uAdd   : TArray<UInt64>;
+ m      : MemAccess;
+
+ function  assertTrue(v:UInt64; mems: TArray<UInt64>):Boolean;
+ var
+   FoundIndex : Integer;
+ begin
+     Result :=  TArray.BinarySearch<UInt64>(mems,v,FoundIndex)
+ end;
+
+begin
+        //Get tainted memory//
+        Triton.Create;
+        Triton.setArchitecture(ARCH_X86_64);
+
+        uAdd := Triton.getTaintedMemory;
+        assert(Length(uAdd) = 0);
+
+        Triton.taintMemory($1000);
+        Triton.taintMemory($2000);
+        Triton.taintMemory($3000);
+
+        m.Create($4000, 4);
+        Triton.taintMemory(m);
+
+        uAdd := Triton.getTaintedMemory;
+
+        assert( assertTrue($1000, uAdd)= True,'Failed $1000');
+        assert( assertTrue($2000, uAdd)= True,'Failed $2000');
+        assert( assertTrue($3000, uAdd)= True,'Failed $3000');
+        assert( assertTrue($4000, uAdd)= True,'Failed $4000');
+        assert( assertTrue($4001, uAdd)= True,'Failed $4001');
+        assert( assertTrue($4002, uAdd)= True,'Failed $4002');
+        assert( assertTrue($4003, uAdd)= True,'Failed $4003');
+        assert( assertTrue($5000, uAdd)= False,'Failed $4004');
 end;
 
 

@@ -85,7 +85,7 @@ interface
         function  getConcreteMemoryValue(Handle: HandleApi; mem: HandleMemAcc; execCallbacks : Boolean = true): uint64;cdecl;  external Triton_dll Name 'getConcreteMemoryValue';
 
         //! [**architecture api**] - Returns the concrete value of a memory area.
-        function  getConcreteMemoryAreaValue(Handle: HandleApi; baseAddr: uint64; size: usize; execCallbacks : Boolean = true):retArray; cdecl;  external Triton_dll Name 'getConcreteMemoryAreaValue';
+        function  getConcreteMemoryAreaValue(Handle: HandleApi; baseAddr: uint64; size: usize; execCallbacks : Boolean = true):PByte; cdecl;  external Triton_dll Name 'getConcreteMemoryAreaValue';
 
         { TODO -oMax -c : Adding support uint512 23/07/2019 18:06:23 }
         //! [**architecture api**] - Returns the concrete value of a register. // not support 512
@@ -96,7 +96,7 @@ interface
         { TODO -oMax -c : Adding support uint512 23/07/2019 18:06:23 }
         procedure  setConcreteMemoryValue(Handle: HandleApi; mem: HandleMemAcc; value: uint64);cdecl;  external Triton_dll Name 'setConcreteMemoryValue';
 
-        procedure  setConcreteMemoryAreaValueByte(Handle: HandleApi; baseAddr : uint64; values: array of Byte);cdecl;  external Triton_dll Name 'setConcreteMemoryAreaValueByte';
+        procedure  setConcreteMemoryAreaValueByte(Handle: HandleApi; baseAddr : uint64; values: PByte);cdecl;  external Triton_dll Name 'setConcreteMemoryAreaValueByte';
 
         procedure  setConcreteMemoryAreaValue(Handle: HandleApi; baseAddr: uint64; area : PByte;  size: usize);cdecl;  external Triton_dll Name 'setConcreteMemoryAreaValue';
 
@@ -210,10 +210,10 @@ interface
         function getSymbolicEngine(Handle: HandleApi): HandleSymbolicEngine; cdecl;  external Triton_dll Name 'getSymbolicEngine';
 
         //! [**symbolic api**] - Returns the map of symbolic registers defined.
-        function getSymbolicRegisters(Handle : HandleApi ): mSymbolicExpReg; cdecl;  external Triton_dll Name 'getSymbolicRegisters';
+        function getSymbolicRegisters(Handle : HandleApi; OutRegE: PRegSymE  ): UInt32; cdecl;  external Triton_dll Name 'getSymbolicRegisters';
 
         //! [**symbolic api**] - Returns the map (<Addr : SymExpr>) of symbolic memory defined.
-        function  getSymbolicMemory(Handle: HandleApi): mSymbolicExpMem ;  cdecl;  external Triton_dll Name 'getSymbolicMemory';
+        function  getSymbolicMemory(Handle: HandleApi;ouMemSym: PMemSymE): UInt32 ;  cdecl;  external Triton_dll Name 'getSymbolicMemory';
 
         //! [**symbolic api**] - Returns the shared symbolic expression corresponding to the memory address.
         function getSymbolicMemoryAddr(Handle: HandleApi; addr: uint64 ):HandleSharedSymbolicExpression ; cdecl;  external Triton_dll Name 'getSymbolicMemoryAddr';
@@ -228,7 +228,7 @@ interface
         function getSymbolicMemoryValueM(Handle: HandleApi; mem: HandleMemAcc): uint64; cdecl;  external Triton_dll Name 'getSymbolicMemoryValueM';
 
         //! [**symbolic api**] - Returns the symbolic values of a memory area.
-        function getSymbolicMemoryAreaValue(Handle: HandleApi; baseAddr: uint64;size: usize): retArray; cdecl;  external Triton_dll Name 'getSymbolicMemoryAreaValue';
+        function getSymbolicMemoryAreaValue(Handle: HandleApi; baseAddr: uint64;size: usize): PByte; cdecl;  external Triton_dll Name 'getSymbolicMemoryAreaValue';
 
         //! [**symbolic api**] - Returns the symbolic register value.
         function getSymbolicRegisterValue(Handle: HandleApi; reg: HandleReg): uint64; cdecl;  external Triton_dll Name 'getSymbolicRegisterValue';
@@ -354,16 +354,16 @@ interface
         procedure  concretizeRegister(Handle: HandleApi; reg: HandleReg); cdecl;  external Triton_dll Name 'concretizeRegister';
 
         //! [**symbolic api**] - Slices all expressions from a given one.
-        function sliceExpressions(Handle: HandleApi; expr: HandleSharedSymbolicExpression):mSymbolicExpSlice; cdecl;  external Triton_dll Name 'sliceExpressions';
+        function sliceExpressions(Handle: HandleApi; expr: HandleSharedSymbolicExpression; outSlice: PIdSymExpr):uint32; cdecl;  external Triton_dll Name 'sliceExpressions';
 
         //! [**symbolic api**] - Returns the list of the tainted symbolic expressions.
         function getTaintedSymbolicExpressions(Handle:HandleApi):ListExpr;  cdecl;  external Triton_dll Name 'getTaintedSymbolicExpressions';
 
         //! [**symbolic api**] - Returns all symbolic expressions as a map of <SymExprId : SymExpr>
-        function getSymbolicExpressions(Handle:HandleApi):mSymbolMap ;  cdecl;  external Triton_dll Name 'getSymbolicExpressions';
+        function getSymbolicExpressions(Handle:HandleApi; outSymMap: PIdSymExpr):UInt32 ;  cdecl;  external Triton_dll Name 'getSymbolicExpressions';
 
         //! [**symbolic api**] - Returns all symbolic variables as a map of <SymVarId : SymVar>
-        function getSymbolicVariables(Handle:HandleApi):mVarMap ; cdecl;  external Triton_dll Name 'getSymbolicVariables';
+        function getSymbolicVariables(Handle:HandleApi; outSymVar: PIdSymVar):uint32 ; cdecl;  external Triton_dll Name 'getSymbolicVariables';
 
         { TODO -oMax -c : Adding support uint512 23/07/2019 18:06:23 }
         //! [**symbolic api**] - Gets the concrete value of a symbolic variable.
@@ -432,10 +432,10 @@ interface
         function getTaintEngine(Handle: HandleApi ):HandleTaintEngine;cdecl;  external Triton_dll Name 'getTaintEngine';
 
         //! [**taint api**] - Returns the tainted addresses.
-        function getTaintedMemory(Handle: HandleApi ):sAddr ;cdecl;  external Triton_dll Name 'getTaintedMemory';
+        function getTaintedMemory(Handle: HandleApi; var outMemAddrs:pUInt64): uint32 ;cdecl;  external Triton_dll Name 'getTaintedMemory';
 
         //! [**taint api**] - Returns the tainted registers.
-        function getTaintedRegisters(Handle: HandleApi ):sReg ;cdecl;  external Triton_dll Name 'getTaintedRegisters';
+        function getTaintedRegisters(Handle: HandleApi; var outRegs:pReg):uint32 ;cdecl;  external Triton_dll Name 'getTaintedRegisters';
 
         //! [**taint api**] - Enables or disables the taint engine.
         procedure  enableTaintEngine(Handle: HandleApi ; flag: Boolean);cdecl;  external Triton_dll Name 'enableTaintEngine';

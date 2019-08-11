@@ -41,7 +41,6 @@ type
 	  node: HandleAbstractNode;
  end;
 
- PReg        = ^HandleReg;
  PSymbolicEx = ^HandleSharedSymbolicExpression;
  POperand    = ^HandleOperandWrapper;
 
