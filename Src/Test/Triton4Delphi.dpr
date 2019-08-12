@@ -22,7 +22,8 @@ uses
   code_coverage_crackme_xor in 'code_coverage_crackme_xor.pas',
   forward_tainting in 'forward_tainting.pas',
   backward_slicing in 'backward_slicing.pas',
-  Ir in 'Ir.pas';
+  Ir in 'Ir.pas',
+  test_path_constraint in 'test_path_constraint.pas';
 
 {$R *.res}
 

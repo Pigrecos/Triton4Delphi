@@ -469,7 +469,7 @@ extern "C"
 	HandleSharedSymbolicVariable EXPORTCALL getSymbolicVariableFromName(HandleApi Handle, char* symVarName);
 
 	//! [**symbolic api**] - Returns the logical conjunction vector of path constraints.
-	uint32 EXPORTCALL getPathConstraints(HandleApi Handle, HandlePathConstraint ** outPath);
+	uint32 EXPORTCALL getPathConstraints(HandleApi Handle, HandlePathConstraint *& outPath);
 
 	//! [**symbolic api**] - Returns the logical conjunction AST of path constraints.
 	HandleAbstractNode EXPORTCALL getPathConstraintsAst(HandleApi Handle);

@@ -87,7 +87,6 @@ procedure main_Ir;
 var
   inst       : istruzione;
   i          : integer;
-  pc         : UInt64;
   se         : symbolicExp;
 
 begin

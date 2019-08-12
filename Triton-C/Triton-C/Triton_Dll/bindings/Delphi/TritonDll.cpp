@@ -598,7 +598,7 @@ uint32 mMemToArray(std::map<triton::uint64, triton::engines::symbolic::SharedSym
 
 uint32 EXPORTCALL  getSymbolicMemory(HandleApi Handle, MemSymE **ouMemSym)
 {
-	static auto s = Handle->getSymbolicMemory();
+	auto s = Handle->getSymbolicMemory();
 	auto   n = mMemToArray(s, ouMemSym);
 
 	return n;
@@ -882,27 +882,21 @@ HandleSharedSymbolicVariable getSymbolicVariableFromName(HandleApi Handle, char*
 	return cc;
 }
 
-uint32 getPathConstraints(HandleApi Handle, HandlePathConstraint ** outPath)
+uint32 getPathConstraints(HandleApi Handle, HandlePathConstraint *& outPath)
 {
-	std::vector<triton::engines::symbolic::PathConstraint> static p = Handle->getPathConstraints();
+	std::vector<triton::engines::symbolic::PathConstraint> p = Handle->getPathConstraints();
 
 	auto n = p.size();
 	auto i = 0;
 
-	HandlePathConstraint * outA = new HandlePathConstraint[n];
+	if (n < 1) return 0;
 
-	for (auto const& it : p) {
-		outA[i] = (HandlePathConstraint) &it;
+	outPath = new HandlePathConstraint[n];
 
-		triton::engines::symbolic::PathConstraint* x = new triton::engines::symbolic::PathConstraint;
-		memcpy(x, &it, sizeof(triton::engines::symbolic::PathConstraint));
-
-		outA[i] = *&x;
-
-		i++;
+	for (size_t i = 0; i < n; i++)
+	{
+		outPath[i] = (HandlePathConstraint)&Handle->getPathConstraints()[i];
 	};
-
-	*outPath = outA;
 
 	return (uint32)n;
 }
@@ -1070,7 +1064,7 @@ uint32 mSymToArray(std::unordered_map<triton::usize, triton::engines::symbolic::
 
 uint32 getSymbolicExpressions(HandleApi Handle, IdSymExpr **outSymMap)
 {
-	static auto s = Handle->getSymbolicExpressions();
+	auto s = Handle->getSymbolicExpressions();
 	auto   n = mSymToArray(s, outSymMap);
 
 	return n;
@@ -1921,7 +1915,7 @@ uint32 EXPORTCALL IgetReadImmediates(HandleInstruz hIstr, ImmNode *& outArray)
 
 uint32 EXPORTCALL IgetUndefinedRegisters(HandleInstruz hIstr, HandleReg *& outArray)
 {
-	static auto ureg = hIstr->getUndefinedRegisters();
+	auto ureg = hIstr->getUndefinedRegisters();
 	size_t n = ureg.size();
 
 	outArray = new HandleReg[n];
@@ -2346,12 +2340,7 @@ void RAPsetMode(hAstRepresentation handle, triton::uint32 mode)
 HandleAstContext CtxCreate(hModes modes)
 {
 	HandleAstContext ss = new std::shared_ptr<triton::ast::AstContext>;
-
-	
-	//auto cc = std::make_shared<AstContext>(modes->get());
-
-	//*ss = cc;
-	
+		
 	return ss;
 	
 }
@@ -2359,12 +2348,7 @@ HandleAstContext CtxCreate(hModes modes)
 HandleAstContext CtxCreateFrom(HandleAstContext other)
 {
 	HandleAstContext ss = new std::shared_ptr<triton::ast::AstContext>;
-
 	
-	//auto cc = std::make_shared<AstContext>(*other->get());
-
-	//*ss = cc;
-
 	return ss;
 
 }
@@ -2841,9 +2825,10 @@ void Node_Delete(HandleAbstractNode Handle)
 
 HandleAstContext Node_getContext(HandleAbstractNode Handle)
 {
-	
-	static auto s = Handle->get()->getContext();
-	return &s;
+	HandleAstContext cc = new std::shared_ptr<triton::ast::AstContext>;
+	*cc = Handle->get()->getContext();
+
+	return cc;
 }
 
 triton::ast::ast_e Node_getType(HandleAbstractNode Handle)

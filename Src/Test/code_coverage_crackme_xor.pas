@@ -25,6 +25,8 @@ type
   end;
 
 
+
+
 const
 (* Isolated function code which must be cover. The source code
 #  of this function is basically:
@@ -102,6 +104,7 @@ implementation
             UntMain;
 
 var
+ test_count : Integer;
  Triton : TApi;
  dFunc   : TDictionary<UInt64,TArray<Byte>>;
 
@@ -189,7 +192,6 @@ begin
 
     // We start with any input. T (Top)
     previousConstraints := astCtxt.equal( astCtxt.bvtrue, astCtxt.bvtrue) ;
-    var d : AnsiString := previousConstraints.ToStr;
 
     // Go through the path constraints
     for pc in pco do
@@ -209,15 +211,12 @@ begin
                     seed   := TDictionary<UInt64,UInt64>.Create;
                     for n in models do
                     begin
-                        symVar := symbolicVar( Triton.getSymbolicVariableFromId(n.Key) );
-
-                        Form1.Log( Format('      SymVar %d (%s) = j $%x',[n.Key,symVar.Comment,n.Value.Value]) );
                         // Get the symbolic variable assigned to the model
                         symVar := symbolicVar( Triton.getSymbolicVariableFromId(n.Key) );
                         // Save the new input as seed.
                         seed.AddOrSetValue(symVar.Origin,  n.Value.Value);
                     end;
-                    if Assigned( seed )then
+                    if seed.Count > 0 then
                         inputs.Add(seed) ;
                 end;
             end;
@@ -257,6 +256,7 @@ begin
 end;
 
 
+
 procedure main;
 var
   i          : integer;
@@ -268,16 +268,15 @@ var
   newInputs  : TList< TDictionary<UInt64,UInt64> >;
 
 begin
-    Triton.Create;
-
     dFunc :=  TDictionary<UInt64,TArray<Byte>>.Create;
     for i := 0to High(fun) do
      dFunc.Add(fun[i].addr,fun[i].inst);
 
+    test_count := 0;
 
+    Triton.Create;
     // Set the architecture
     Triton.setArchitecture(ARCH_X86_64);
-
     // Symbolic optimization
     Triton.enableMode(ALIGNED_MEMORY, True) ;
 
@@ -293,12 +292,19 @@ begin
 
     while worklist.Count >0 do
     begin
-
         // Take the first seed
-        seed := worklist.Items[0];
+        seed := worklist[0] ;
 
-        for i := 0 to Length(seed.Keys.ToArray) - 1 do
-           Form1.Log( Format('Seed injected: {%d : %d}',[ seed.Keys.ToArray[i], seed.Values.ToArray[i] ]) );
+        var s : string := 'Seed injected: {';
+        var s1 : string := '';
+
+        var u : TArray<Uint64> := seed.Keys.ToArray;
+        TArray.Sort<Uint64>(u);
+        for i in u do
+           s1 := s1 + i.ToString +' : '+ seed[i].ToString +',';
+        s1 := Copy(s1,1,Length(s1)-1);
+        Form1.Log( s + s1 +'}' );
+
 
         // Symbolize inputs
         symbolizeInputs(seed);
@@ -311,6 +317,7 @@ begin
 
         lastInput.Add(seed);
         worklist.Delete(0);
+        worklist.TrimExcess();
 
         newInputs := getNewInput;
 
@@ -321,6 +328,7 @@ begin
                 worklist.Add( inputs );
             end;
         end;
+        inc(test_count);
 
     end;
 

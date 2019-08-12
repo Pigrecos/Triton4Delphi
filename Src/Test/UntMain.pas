@@ -64,7 +64,8 @@ implementation
             code_coverage_crackme_xor,
             forward_tainting,
             backward_slicing,
-            ir;
+            ir,
+            test_path_constraint;
 {$R *.dfm}
 
 procedure TForm1.Log(msg: string);
@@ -84,6 +85,8 @@ var
 
 begin
    mmoLog.Lines.Clear;
+
+   test_Path;
 
  //test_1
      vApi.Create;
