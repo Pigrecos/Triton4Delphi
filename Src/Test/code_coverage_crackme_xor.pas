@@ -17,7 +17,7 @@ unit code_coverage_crackme_xor;
 *)
 
 interface
-      uses Winapi.Windows, Winapi.Messages, System.SysUtils,System.Generics.Collections;
+      uses Winapi.Windows, Winapi.Messages, System.SysUtils,System.Generics.Collections,System.Generics.Defaults;
 type
   op = record
     addr: UInt64;
@@ -259,18 +259,71 @@ end;
 
 procedure main;
 var
-  i          : integer;
   uEntry     : UInt64;
   inputs     : TDictionary<UInt64,UInt64>;
   seed       : TDictionary<UInt64,UInt64>;
   lastInput  : TList< TDictionary<UInt64,UInt64> > ;
   worklist   : TList< TDictionary<UInt64,UInt64> > ;
   newInputs  : TList< TDictionary<UInt64,UInt64> >;
+  Comparer   : IComparer<TDictionary<UInt64,UInt64>>;
+  findItem   : Integer;
+  function SeedToStr(dict : TDictionary<UInt64,UInt64>): string;
+   var
+     i    : integer;
+     s,s1 : string;
+     u    : TArray<Uint64> ;
+  begin
+      s  := 'Seed injected: {';
+      s1 := '';
+      u  := dict.Keys.ToArray;
+
+      TArray.Sort<Uint64>(u);
+      for i in u do
+         s1 := s1 + i.ToString +' : '+ dict[i].ToString +',';
+      s1 := Copy(s1,1,Length(s1)-1);
+
+      Result := s + s1 +'}';
+  end;
 
 begin
     dFunc :=  TDictionary<UInt64,TArray<Byte>>.Create;
-    for i := 0to High(fun) do
+    for var i : Integer := 0to High(fun) do
      dFunc.Add(fun[i].addr,fun[i].inst);
+
+    Comparer := TDelegatedComparer< TDictionary<UInt64,UInt64> >.Construct(
+    function (const L, R: TDictionary<UInt64,UInt64>): Integer
+    var
+      k : Tarray<Uint64>;
+      v : Tarray<Uint64>;
+      cv,ck : uint64 ;
+    begin
+        k := L.Keys.ToArray;
+        v := L.Values.ToArray;
+
+        cv := 0; ck := 0;
+
+        for var i := 0 to High(k) do
+          ck := ck xor k[i];
+        for var j := 0 to High(v) do
+          cv := cv xor v[j];
+
+        var a : uint64 := ck xor cv;
+
+        k := R.Keys.ToArray;
+        v := R.Values.ToArray;
+
+        cv := 0; ck := 0;
+
+        for var i := 0 to High(k) do
+          ck := ck xor k[i];
+        for var j := 0 to High(v) do
+          cv := cv xor v[j];
+
+        var b : uint64 := ck xor cv;
+
+        Result :=a - b ;
+    end
+  );
 
     test_count := 0;
 
@@ -295,16 +348,7 @@ begin
         // Take the first seed
         seed := worklist[0] ;
 
-        var s : string := 'Seed injected: {';
-        var s1 : string := '';
-
-        var u : TArray<Uint64> := seed.Keys.ToArray;
-        TArray.Sort<Uint64>(u);
-        for i in u do
-           s1 := s1 + i.ToString +' : '+ seed[i].ToString +',';
-        s1 := Copy(s1,1,Length(s1)-1);
-        Form1.Log( s + s1 +'}' );
-
+        Form1.Log( SeedToStr(seed) );
 
         // Symbolize inputs
         symbolizeInputs(seed);
@@ -318,12 +362,14 @@ begin
         lastInput.Add(seed);
         worklist.Delete(0);
         worklist.TrimExcess();
+        lastInput.Sort(Comparer);
+        worklist.Sort(Comparer);
 
         newInputs := getNewInput;
 
         for inputs in newInputs do
         begin
-            if (lastInput.Contains(inputs) = False) and (worklist.Contains(inputs) = False) then
+            if (not lastInput.BinarySearch(inputs,findItem,Comparer)) and (not worklist.BinarySearch(inputs,findItem,Comparer)) then
             begin
                 worklist.Add( inputs );
             end;

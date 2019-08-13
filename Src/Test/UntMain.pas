@@ -324,13 +324,16 @@ begin
    Log(' end simplification=============');
    Log('') ;
 
+   Log(' ==End Stadard Test==');
+
 end;
 
 procedure TForm1.btnTaintClick(Sender: TObject);
 begin
    mmoLog.Clear;
-   Log('test forward_tainting');
+   Log('==test forward_tainting==');
    main_taint;
+   Log(' ==End forward_tainting==');
 end;
 
 procedure TForm1.test6;
@@ -544,31 +547,37 @@ type
 procedure TForm1.btnIrClick(Sender: TObject);
 begin
     mmoLog.Clear;
-    Log('test Ir');
-    main_Ir
+    Log('==test Ir==');
+    main_Ir ;
+    Log(' ==End test Ir==');
 end;
 
 procedure TForm1.btnOp_PreClick(Sender: TObject);
 begin
     mmoLog.Clear;
-    Log('test opaque predicates');
+    Log('==test opaque predicates==');
     test_trace(trace_1);
     test_trace(trace_2);
     test_trace(trace_3);
     test_trace(trace_4);
     test_trace(trace_5) ;
+    Log(' ==End opaque predicates==');
 end;
 
 procedure TForm1.btnslicingClick(Sender: TObject);
 begin
     mmoLog.Clear;
-    Log('test backward slicing');
+    Log('==test backward slicing==');
     main_slicing;
+    Log(' ==End backward slicing==');
 end;
 
 procedure TForm1.btnCoverageClick(Sender: TObject);
 begin
-    main
+    mmoLog.Clear;
+    Log('==test code_coverage_crackme_xor==');
+    main ;
+    Log(' ==End code_coverage_crackme_xor==');
 end;
 
 procedure TForm1.constraint;
