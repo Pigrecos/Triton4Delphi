@@ -15,6 +15,5 @@
   
 ## ToDo  - Attention is an initial release and not 100% tested -
   * Adding support uint512.
-  * Proving and test Callback's procedure(very hard for delphi)
   * Test test and More . Any collaboration is welcome ;) 
 
