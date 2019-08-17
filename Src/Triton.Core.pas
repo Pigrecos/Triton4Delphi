@@ -149,37 +149,37 @@ interface
     (* Callbacks API ================================================================================= *)
 
         //! [**callbacks api**] - Adds a GET_CONCRETE_MEMORY_VALUE callback (LOAD).
-        procedure addCallbackGetMem(Handle: HandleApi; cb: cbGetMemVal); cdecl;  external Triton_dll Name 'addCallbackGetMem';
+        procedure addCallbackGetMem(Handle: HandleApi; cb: pointer{cbGetMemVal}); cdecl;  external Triton_dll Name 'addCallbackGetMem';
 
         //! [**callbacks api**] - Adds a GET_CONCRETE_REGISTER_VALUE callback (GET).
-        procedure  addCallbackGetReg(Handle: HandleApi; cb: cbGetRegVal); cdecl;  external Triton_dll Name 'addCallbackGetReg';
+        procedure  addCallbackGetReg(Handle: HandleApi; cb: pointer{cbGetRegVal}); cdecl;  external Triton_dll Name 'addCallbackGetReg';
 
         //! [**callbacks api**] - Adds a SET_CONCRETE_MEMORY_VALUE callback (STORE).
-        procedure addCallbackSetMem(Handle: HandleApi; cb: cbSetMemVal); cdecl;  external Triton_dll Name 'addCallbackSetMem';
+        procedure addCallbackSetMem(Handle: HandleApi; cb: pointer{cbSetMemVal}); cdecl;  external Triton_dll Name 'addCallbackSetMem';
 
         //! [**callbacks api**] - Adds a SET_CONCRETE_REGISTER_VALUE callback (PUT).
-        procedure addCallbackSetReg(Handle: HandleApi; cb: cbSetRegVal);cdecl;  external Triton_dll Name 'addCallbackSetReg';
+        procedure addCallbackSetReg(Handle: HandleApi; cb: pointer{cbSetRegVal});cdecl;  external Triton_dll Name 'addCallbackSetReg';
 
         //! [**callbacks api**] - Adds a SYMBOLIC_SIMPLIFICATION callback.
-        procedure addCallbackSimplif(Handle: HandleApi; cb: cbSimplification); cdecl;  external Triton_dll Name 'addCallbackSimplif';
+        procedure addCallbackSimplif(Handle: HandleApi; cb: pointer{cbSimplification}); cdecl;  external Triton_dll Name 'addCallbackSimplif';
 
         //! [**callbacks api**] - Removes all recorded callbacks.
         procedure removeAllCallbacks(Handle: HandleApi);cdecl;  external Triton_dll Name 'removeAllCallbacks';
 
         //! [**callbacks api**] - Deletes a GET_CONCRETE_MEMORY_VALUE callback (LOAD).
-        procedure removeCallbackGetMem(Handle: HandleApi; cb: cbGetMemVal); cdecl;  external Triton_dll Name 'removeCallbackGetMem';
+        procedure removeCallbackGetMem(Handle: HandleApi; cb: pointer{cbGetMemVal}); cdecl;  external Triton_dll Name 'removeCallbackGetMem';
 
         //! [**callbacks api**] - Deletes a GET_CONCRETE_REGISTER_VALUE callback (GET).
-        procedure removeCallbackGetReg(Handle: HandleApi; cb: cbGetRegVal); cdecl;  external Triton_dll Name 'removeCallbackGetReg';
+        procedure removeCallbackGetReg(Handle: HandleApi; cb: pointer{cbGetRegVal}); cdecl;  external Triton_dll Name 'removeCallbackGetReg';
 
         //! [**callbacks api**] - Deletes a SET_CONCRETE_MEMORY_VALUE callback (STORE).
-        procedure removeCallbackSetMem(Handle: HandleApi; cb: cbSetMemVal); cdecl;  external Triton_dll Name 'removeCallbackSetMem';
+        procedure removeCallbackSetMem(Handle: HandleApi; cb: pointer{cbSetMemVal}); cdecl;  external Triton_dll Name 'removeCallbackSetMem';
 
         //! [**callbacks api**] - Deletes a SET_CONCRETE_REGISTER_VALUE callback (PUT).
-        procedure removeCallbackSetReg(Handle: HandleApi; cb: cbSetRegVal);  cdecl;  external Triton_dll Name 'removeCallbackSetReg';
+        procedure removeCallbackSetReg(Handle: HandleApi; cb: pointer{cbSetRegVal});  cdecl;  external Triton_dll Name 'removeCallbackSetReg';
 
         //! [**callbacks api**] - Deletes a SYMBOLIC_SIMPLIFICATION callback.
-        procedure  removeCallbackSimplif(Handle: HandleApi; cb: cbSimplification); cdecl;  external Triton_dll Name 'removeCallbackSimplif';
+        procedure  removeCallbackSimplif(Handle: HandleApi; cb: pointer{cbSimplification}); cdecl;  external Triton_dll Name 'removeCallbackSimplif';
 
         //! [**callbacks api**] - Processes callbacks according to the kind and the C++ polymorphism.
         function processCallbacks(Handle: HandleApi; kind: callback_e; node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'processCallbacks';

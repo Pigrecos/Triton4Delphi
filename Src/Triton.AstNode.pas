@@ -14,16 +14,32 @@ type
   AbstractNode = record
     private
       FHandleAbstractNode : HandleAbstractNode;
-      FChildrens          : TArray<AbstractNode>;
-      FParents            : TArray<AbstractNode>;
+      FChildrens          : TArray<AbstractNode> ;
+      FParents            : TArray<AbstractNode> ;
+      FTipo               : ast_e;
+      FBitvectorSize      : uint32;
+      FBitvectorMask      : UInt64;
+      FisSigned           : Boolean;
+      FisSymbolized       : Boolean;
+      FisLogical          : Boolean;
 
       function  getChildren: TArray<AbstractNode>;
       function  getParents:  TArray<AbstractNode>;
       function  getContext: HandleAstContext ;
+      procedure Update;
+      function  IsNodeAssigned: Boolean;
 
     public
       procedure Create(tipo: ast_e; ctxt: HandleAstContext);
       procedure Free;
+
+      //comparasion
+      function Equal               (n1: AbstractNode): AbstractNode;
+      function NotEqual            (n1: AbstractNode): AbstractNode;
+      function LessThanOrEqual     (n1: AbstractNode): AbstractNode;
+      function GreaterThanOrEqual  (n1: AbstractNode): AbstractNode;
+      function LessThan            (n1: AbstractNode): AbstractNode;
+      function GreaterThan         (n1: AbstractNode): AbstractNode;
 
       function  getType: ast_e ;
       function  getBitvectorSize: uint32 ;
@@ -50,9 +66,51 @@ type
       class operator implicit(rNode: AbstractNode): HandleAbstractNode;
       class Operator Implicit(hNode: HandleAbstractNode):AbstractNode;
 
-    property  Childrens  : TArray<AbstractNode> read getChildren;
-    property  Parents    : TArray<AbstractNode> read getParents;
-    property  Context    : HandleAstContext     read getContext;
+      (*As we can not overload all AST's operators only these following operators are overloaded:
+
+      Python's Operator | e.g: SMT2-Lib format
+      ------------------|---------------------
+      a + b             | (bvadd a b)
+      a - b             | (bvsub a b)
+      a * b             | (bvmul a b)
+      a / b             | (bvudiv a b)
+      a | b             | (bvor a b)
+      a & b             | (bvand a b)
+      a ^ b             | (bvxor a b)
+      a % b             | (bvurem a b)
+      a << b            | (bvshl a b)
+      a >> b            | (bvlshr a b)
+      ~a                | (bvnot a)
+      -a                | (bvneg a)
+      a == b            | (= a b)
+      a != b            | (not (= a b))
+      a <= b            | (bvule a b)
+      a >= b            | (bvuge a b)
+      a < b             | (bvult a b)
+      a > b             | (bvugt a b)    *)
+
+      class Operator Add       (n1,n2: AbstractNode): AbstractNode;
+      class Operator Subtract  (n1,n2: AbstractNode): AbstractNode;
+      class Operator Multiply  (n1,n2: AbstractNode): AbstractNode;
+      class Operator Divide    (n1,n2: AbstractNode): AbstractNode;
+      class Operator LogicalOr (n1,n2: AbstractNode): AbstractNode;
+      class Operator BitwiseAnd(n1,n2: AbstractNode): AbstractNode;
+      class Operator BitwiseXor(n1,n2: AbstractNode): AbstractNode;
+      class Operator Modulus   (n1,n2: AbstractNode): AbstractNode;
+      class Operator LeftShift (n1,n2: AbstractNode): AbstractNode;
+      class Operator RightShift(n1,n2: AbstractNode): AbstractNode;
+      class Operator LogicalNot(n1   : AbstractNode): AbstractNode;
+      class Operator Negative  (n1   : AbstractNode): AbstractNode;
+
+    property  Childrens     : TArray<AbstractNode> read getChildren;
+    property  Parents       : TArray<AbstractNode> read getParents;
+    property  Context       : HandleAstContext     read getContext;
+    property  Tipo          : ast_e                read FTipo;
+    property  BitvectorSize : uint32               read FBitvectorSize;
+    property  BitvectorMask : UInt64               read FBitvectorMask;
+    property  Signed        : Boolean              read FisSigned;
+    property  Symbolized    : Boolean              read FisSymbolized;
+    property  Logical       : Boolean              read FisLogical;
 
   end;
 
@@ -106,12 +164,15 @@ type
 	    procedure AstToStr(hnode: HandleAbstractNode; var sOut: PAnsiChar); cdecl;  external Triton_dll Name 'AstToStr';
 
 implementation
+    uses Triton.AstContext;
 
 { AbstractNode }
 
 procedure AbstractNode.Create(tipo: ast_e;  ctxt: HandleAstContext);
 begin
     FHandleAbstractNode      := Node_Create(tipo,ctxt);
+
+    Update;
 end;
 
 procedure AbstractNode.Free;
@@ -128,6 +189,8 @@ class operator AbstractNode.implicit(hNode: HandleAbstractNode): AbstractNode;
 begin
     ZeroMemory(@Result,SizeOf(AbstractNode));
     Result.FHandleAbstractNode  := hNode ;
+    Result.Update;
+
 end;
 
 class operator AbstractNode.Explicit(rNode: AbstractNode): HandleAbstractNode;
@@ -139,6 +202,22 @@ class operator AbstractNode.Explicit(hNode: HandleAbstractNode): AbstractNode;
 begin
     ZeroMemory(@Result,SizeOf(AbstractNode));
     Result.FHandleAbstractNode  := hNode ;
+    Result.Update;
+
+end;
+
+procedure AbstractNode.Update;
+begin
+    FTipo          := getType;
+
+    if FTipo in  [ASSERT_NODE..ZX_NODE] then
+    begin
+      FBitvectorSize := getBitvectorSize;
+      FBitvectorMask := getBitvectorMask;
+      FisSigned      := isSigned;
+      FisSymbolized  := isSymbolized;
+      FisLogical     := isLogical;
+    end;
 end;
 
 function AbstractNode.equalTo(other: AbstractNode): Boolean;
@@ -223,34 +302,235 @@ begin
     Node_init(FHandleAbstractNode);
 end;
 
+function AbstractNode.IsNodeAssigned: Boolean;
+begin
+    Result := FHandleAbstractNode <> nil;
+end;
+
+class operator AbstractNode.Add(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvadd(n1,n2);
+
+    Result := res;
+end;
+
+class operator AbstractNode.Subtract(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvsub(n1,n2);
+
+    Result := res;
+end;
+
+class operator AbstractNode.Divide(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvudiv(n1,n2);
+
+    Result := res;
+end;
+
+class operator AbstractNode.Modulus(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvurem(n1,n2);
+
+    Result := res;
+end;
+
+class operator AbstractNode.Multiply(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvmul(n1,n2);
+
+    Result := res;
+end;
+
+class operator AbstractNode.BitwiseAnd(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvand(n1,n2);
+
+    Result := res;
+end;
+
+class operator AbstractNode.BitwiseXor(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvxor(n1,n2);
+
+    Result := res;
+end;
+
+class operator AbstractNode.LeftShift(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvshl(n1,n2);
+
+    Result := res;
+end;
+
+class operator AbstractNode.RightShift(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvlshr(n1,n2);
+
+    Result := res;
+
+end;
+
+class operator AbstractNode.LogicalOr(n1, n2: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned) and  (n2.IsNodeAssigned) then
+     res :=  AstContext(n1.Context).bvor(n1,n2);
+
+    Result := res;
+end;
+
+class operator AbstractNode.LogicalNot(n1: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned)  then
+     res :=  AstContext(n1.Context).bvnot(n1);
+
+    Result := res;
+end;
+
+class operator AbstractNode.Negative(n1: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned)  then
+     res :=  AstContext(n1.Context).bvneg(n1);
+
+    Result := res;
+end;
+
+function  AbstractNode.Equal(n1: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned)  then
+     res :=  AstContext(n1.Context).equal(self,n1);
+
+    Result := res;
+end;
+
+function AbstractNode.NotEqual(n1: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned)  then
+    begin
+        res :=  AstContext(n1.Context).equal(self,n1);
+        res :=  AstContext(n1.Context).lnot(res);
+    end;
+
+    Result := res;
+end;
+
+function AbstractNode.LessThan(n1: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned)  then
+     res :=  AstContext(n1.Context).bvult(self,n1);
+
+    Result := res;
+end;
+
+function AbstractNode.LessThanOrEqual(n1: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned)  then
+     res :=  AstContext(n1.Context).bvule(self,n1);
+
+    Result := res;
+end;
+
+function AbstractNode.GreaterThan(n1: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned)  then
+     res :=  AstContext(n1.Context).bvugt(self,n1);
+
+    Result := res;
+end;
+
+function AbstractNode.GreaterThanOrEqual(n1: AbstractNode): AbstractNode;
+var
+  res : AbstractNode;
+begin
+    if (n1.IsNodeAssigned)  then
+     res :=  AstContext(n1.Context).bvuge(self,n1);
+
+    Result := res;
+end;
+
 procedure AbstractNode.addChild(child: AbstractNode);
 begin
     Node_addChild(FHandleAbstractNode,HandleAbstractNode(child));
+
+    FChildrens     := getChildren;
 end;
 
 procedure AbstractNode.removeParent(p: AbstractNode);
 begin
     Node_removeParent(FHandleAbstractNode,HandleAbstractNode(p));
+
+    FParents       := getParents;
 end;
 
 procedure AbstractNode.setBitvectorSize(size: uint32);
 begin
     Node_setBitvectorSize(FHandleAbstractNode,size);
+
+    FBitvectorSize := getBitvectorSize;
 end;
 
 procedure AbstractNode.setChild(index: uint32; child: AbstractNode);
 begin
     Node_setChild(FHandleAbstractNode,index,HandleAbstractNode(child));
+
+    FChildrens     := getChildren;
 end;
 
 procedure AbstractNode.setParent(p: AbstractNode);
 begin
     Node_setParent(FHandleAbstractNode,HandleAbstractNode(p));
+
+    FParents       := getParents;
 end;
 
 procedure AbstractNode.setParents(p: PAHNode; size: uint32);
 begin
     Node_setParents(FHandleAbstractNode,p,size);
+
+    FParents       := getParents;
 end;
 
 function AbstractNode.str: string;

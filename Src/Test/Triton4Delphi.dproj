@@ -166,6 +166,8 @@
         <DCCReference Include="backward_slicing.pas"/>
         <DCCReference Include="Ir.pas"/>
         <DCCReference Include="test_path_constraint.pas"/>
+        <DCCReference Include="Simplification.pas"/>
+        <DCCReference Include="Callback.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
             <CfgParent>Base</CfgParent>

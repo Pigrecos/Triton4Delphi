@@ -146,6 +146,28 @@ _Istruz RefIstruzToIstruz(HandleInstruz HOpW)
 
 /* Architecture API ============================================================================== */
 
+/* Callbacs Procedure         -- very bad implementation but it works ...:):) */
+
+HandleAbstractNode(*cs)(HandleApi, HandleAbstractNode);
+HandleAbstractNode(*cs1)(HandleApi, HandleAbstractNode);
+HandleAbstractNode(*cs2)(HandleApi, HandleAbstractNode);
+
+void(*cSRVal)  (HandleApi, HandleReg, uint64);
+void(*cSRVal1) (HandleApi, HandleReg, uint64);
+void(*cSRVal2) (HandleApi, HandleReg, uint64);
+
+void(*cSMVal)  (HandleApi, HandleMemAcc, uint64);
+void(*cSMVal1) (HandleApi, HandleMemAcc, uint64);
+void(*cSMVal2) (HandleApi, HandleMemAcc, uint64);
+
+void(*cGRVal)  (HandleApi, HandleReg);
+void(*cGRVal1) (HandleApi, HandleReg);
+void(*cGRVal2) (HandleApi, HandleReg);
+
+void(*cGMVal)  (HandleApi, HandleMemAcc);
+void(*cGMVal1) (HandleApi, HandleMemAcc);
+void(*cGMVal2) (HandleApi, HandleMemAcc);
+
 HandleApi  CreateApi(void)
 {
 	return new triton::API();
@@ -155,6 +177,25 @@ HandleApi  CreateApi(void)
 void  DeleteApi(HandleApi Handle)
 {
 	delete Handle;
+	cs = NULL;
+	cs1 = NULL;
+	cs2 = NULL;
+
+	cSRVal = NULL;
+	cSRVal1 = NULL;
+	cSRVal2 = NULL;
+
+	cSMVal = NULL;
+	cSMVal1 = NULL;
+	cSMVal2 = NULL;
+
+	cGRVal = NULL;
+	cGRVal1 = NULL;
+	cGRVal2 = NULL;
+
+	cGMVal = NULL;
+	cGMVal1 = NULL;
+	cGMVal2 = NULL;
 }
 
 void  setArchitecture(HandleApi Handle, triton::arch::architecture_e arch)
@@ -410,59 +451,351 @@ void setAstRepresentationMode(HandleApi Handle,triton::uint32 mode)
 
 /* Callbacks API ================================================================================= */
 
+/*addCallbackGetMem Callbacs Procedure         -- very bad implementation but it works ...:):) */
+
+void cbGetMem(triton::API& ctx, const triton::arch::MemoryAccess& mem)
+{
+	cGMVal(&ctx, HandleMemAcc(&mem));
+}
+void cbGetMem1(triton::API& ctx, const triton::arch::MemoryAccess& mem)
+{
+	cGMVal1(&ctx, HandleMemAcc(&mem));
+}
+void cbGetMem2(triton::API& ctx, const triton::arch::MemoryAccess& mem)
+{
+	cGMVal2(&ctx, HandleMemAcc(&mem));
+}
+
 void addCallbackGetMem(HandleApi Handle, cbGetMemVal cb)
 {
-	Handle->addCallback(*cb);
+	if (cGMVal == NULL)
+	{
+		cGMVal = *cb;
+		Handle->addCallback(cbGetMem);
+	}
+	else if (cGMVal1 == NULL)
+	{
+		cGMVal1 = *cb;
+		Handle->addCallback(cbGetMem1);
+	}
+	else if (cGMVal2 == NULL)
+	{
+		cGMVal2 = *cb;
+		Handle->addCallback(cbGetMem2);
+	}
+	else
+	{
+		std::cout << "API For C::addCallbackGetMem(): reached callback limit." << std::endl;
+	}
+}
+
+/*addCallbackGetReg Callbacs Procedure         -- very bad implementation but it works ...:):) */
+
+void cbGetReg(triton::API& ctx, const triton::arch::Register& reg)
+{
+	cGRVal(&ctx, HandleReg(&reg));
+}
+void cbGetReg1(triton::API& ctx, const triton::arch::Register& reg)
+{
+	cGRVal1(&ctx, HandleReg(&reg));
+}
+void cbGetReg2(triton::API& ctx, const triton::arch::Register& reg)
+{
+	cGRVal2(&ctx, HandleReg(&reg));
 }
 
 void  addCallbackGetReg(HandleApi Handle, cbGetRegVal cb)
 {
-	Handle->addCallback(*cb);
+	if (cGRVal == NULL)
+	{
+		cGRVal = *cb;
+		Handle->addCallback(cbGetReg);
+	}
+	else if (cGRVal1 == NULL)
+	{
+		cGRVal1 = *cb;
+		Handle->addCallback(cbGetReg1);
+	}
+	else if (cGRVal2 == NULL)
+	{
+		cGRVal2 = *cb;
+		Handle->addCallback(cbGetReg2);
+	}
+	else
+	{
+		std::cout << "API For C::addCallbackGetReg(): reached callback limit." << std::endl;
+	}
+}
+
+/*addCallbackSetMem Callbacs Procedure         -- very bad implementation but it works ...:):) */
+
+void cbSetMem(triton::API& ctx, const triton::arch::MemoryAccess& mem, const triton::uint512& value)
+{
+	cSMVal(&ctx, HandleMemAcc(&mem), (uint64)value);
+}
+void cbSetMem1(triton::API& ctx, const triton::arch::MemoryAccess& mem, const triton::uint512& value)
+{
+	cSMVal1(&ctx, HandleMemAcc(&mem), (uint64)value);
+}
+void cbSetMem2(triton::API& ctx, const triton::arch::MemoryAccess& mem, const triton::uint512& value)
+{
+	cSMVal2(&ctx, HandleMemAcc(&mem), (uint64)value);
 }
 
 void addCallbackSetMem(HandleApi Handle, cbSetMemVal cb)
 {
-	Handle->addCallback(*cb);
+	if (cSMVal == NULL)
+	{
+		cSMVal = *cb;
+		Handle->addCallback(cbSetMem);
+	}
+	else if (cSMVal1 == NULL)
+	{
+		cSMVal1 = *cb;
+		Handle->addCallback(cbSetMem1);
+	}
+	else if (cSMVal2 == NULL)
+	{
+		cSMVal2 = *cb;
+		Handle->addCallback(cbSetMem2);
+	}
+	else
+	{
+		std::cout << "API For C::addCallbackSetMem(): reached callback limit." << std::endl;
+	}
+	
+}
+
+/*addCallbackSetReg Callbacs Procedure         -- very bad implementation but it works ...:):) */
+
+void cbSetReg(triton::API& ctx , const triton::arch::Register& reg , const triton::uint512& value)
+{
+	cSRVal(&ctx, HandleReg(&reg), (uint64)value);
+}
+void cbSetReg1(triton::API& ctx, const triton::arch::Register& reg, const triton::uint512& value)
+{
+	cSRVal1(&ctx, HandleReg(&reg), (uint64)value);
+}
+void cbSetReg2(triton::API& ctx, const triton::arch::Register& reg, const triton::uint512& value)
+{
+	cSRVal2(&ctx, HandleReg(&reg), (uint64)value);
 }
 
 void addCallbackSetReg(HandleApi Handle, cbSetRegVal cb)
 {
-	Handle->addCallback(*cb);
+	
+	if (cSRVal == NULL)
+	{
+		cSRVal = *cb;
+		Handle->addCallback(cbSetReg);
+	}
+	else if (cSRVal1 == NULL)
+	{
+		cSRVal1 = *cb;
+		Handle->addCallback(cbSetReg1);
+	}
+	else if (cSRVal2 == NULL)
+	{
+		cSRVal2 = *cb;
+		Handle->addCallback(cbSetReg2);
+	}
+	else
+	{
+		std::cout << "API For C::addCallbackSetReg(): reached callback limit." << std::endl;
+	}
 }
 
+/*addCallbackSimplif Callbacs Procedure         -- very bad implementation but it works ...:):) */
+
+triton::ast::SharedAbstractNode simplification(triton::API& ctx, const triton::ast::SharedAbstractNode& node)
+{	
+	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
+	*cc = node;
+
+	cc = cs(&ctx, cc);
+	
+	return *cc;
+}
+triton::ast::SharedAbstractNode simplification1(triton::API& ctx, const triton::ast::SharedAbstractNode& node)
+{
+	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
+	*cc = node;
+
+	cc = cs1(&ctx, cc);
+
+	return *cc;
+}
+triton::ast::SharedAbstractNode simplification2(triton::API& ctx, const triton::ast::SharedAbstractNode& node)
+{
+	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
+	*cc = node;
+
+	cc = cs2(&ctx, cc);
+
+	return *cc;
+}
 void addCallbackSimplif(HandleApi Handle, cbSimplification cb)
 {
-	Handle->addCallback(*cb);
+	if (cs == NULL)
+	{ 
+		cs = *cb;
+		Handle->addCallback(simplification);
+	}
+	else if (cs1 == NULL)
+	{
+		cs1 = *cb;
+		Handle->addCallback(simplification1);
+	}
+	else if (cs1 == NULL)
+	{
+		cs2 = *cb;
+		Handle->addCallback(simplification2);
+	}
+	else 
+	{
+		std::cout << "API For C::addCallbackSimplif(): reached callback limit."  << std::endl;
+	}
+	
 }
 
 void removeAllCallbacks(HandleApi Handle)
 {
 	Handle->removeAllCallbacks();
+	cs = NULL;
+	cs1 = NULL;
+	cs2 = NULL;
+
+	cSRVal = NULL;
+	cSRVal1 = NULL;
+	cSRVal2 = NULL;
+
+	cSMVal = NULL;
+	cSMVal1 = NULL;
+	cSMVal2 = NULL;
+
+	cGRVal = NULL;
+	cGRVal1 = NULL;
+	cGRVal2 = NULL;
+
+	cGMVal = NULL;
+	cGMVal1 = NULL;
+	cGMVal2 = NULL;
 }
 
 void removeCallbackGetMem(HandleApi Handle, cbGetMemVal cb)
 {
-	Handle->removeCallback(*cb);
+	if (cGMVal == *cb)
+	{
+		Handle->removeCallback(cbGetMem);
+		cGMVal = NULL;
+	}
+	else if (cGMVal1 == *cb)
+	{
+		Handle->removeCallback(cbGetMem1);
+		cGMVal1 = NULL;
+	}
+	else if (cGMVal2 == *cb)
+	{
+		Handle->removeCallback(cbGetMem2);
+		cGMVal2 = NULL;
+	}
+	else
+	{
+		std::cout << "API For C::removeCallbackGetMem(): callback not found." << std::endl;
+	}
 }
 
 void removeCallbackGetReg(HandleApi Handle, cbGetRegVal cb)
 {
-	Handle->removeCallback(*cb);
+	if (cGRVal == *cb)
+	{
+		Handle->removeCallback(cbGetReg);
+		cGRVal = NULL;
+	}
+	else if (cGRVal1 == *cb)
+	{
+		Handle->removeCallback(cbGetReg1);
+		cGRVal1 = NULL;
+	}
+	else if (cGRVal2 == *cb)
+	{
+		Handle->removeCallback(cbGetReg2);
+		cGRVal2 = NULL;
+	}
+	else
+	{
+		std::cout << "API For C::removeCallbackGetReg(): callback not found." << std::endl;
+	}
 }
 
 void removeCallbackSetMem(HandleApi Handle, cbSetMemVal cb)
 {
-	Handle->removeCallback(*cb);
+	if (cSMVal == *cb)
+	{
+		Handle->removeCallback(cbSetMem);
+		cSMVal = NULL;
+	}
+	else if (cSMVal1 == *cb)
+	{
+		Handle->removeCallback(cbSetMem1);
+		cSMVal1 = NULL;
+	}
+	else if (cSMVal2 == *cb)
+	{
+		Handle->removeCallback(cbSetMem2);
+		cSMVal2 = NULL;
+	}
+	else
+	{
+		std::cout << "API For C::removeCallbackSetMem(): callback not found." << std::endl;
+	}
 }
 
 void removeCallbackSetReg(HandleApi Handle, cbSetRegVal cb)
 {
-	Handle->removeCallback(*cb);
+	if (cSRVal == *cb)
+	{
+		Handle->removeCallback(cbSetReg);
+		cSRVal = NULL;
+	}
+	else if (cSRVal1 == *cb)
+	{
+		Handle->removeCallback(cbSetReg1);
+		cSRVal1 = NULL;
+	}
+	else if (cSRVal2 == *cb)
+	{
+		Handle->removeCallback(cbSetReg2);
+		cSRVal2 = NULL;
+	}
+	else
+	{
+		std::cout << "API For C::removeCallbackSetReg(): callback not found." << std::endl;
+	}
 }
 
 void removeCallbackSimplif(HandleApi Handle, cbSimplification cb)
 {
-	Handle->removeCallback(*cb);
+	if (cs == *cb)
+	{
+		Handle->removeCallback(simplification);
+		cs = NULL;
+	}
+	else if (cs1 == *cb)
+	{
+		Handle->removeCallback(simplification1);
+		cs1 = NULL;
+	}
+	else if (cs2 == *cb)
+	{
+		Handle->removeCallback(simplification2);
+		cs2 = NULL;
+	}
+	else
+	{
+		std::cout <<"API For C::removeCallbackSimplif(): callback not found." << std::endl;
+	}
+	
 }
 
 HandleAbstractNode processCallbacks(HandleApi Handle, triton::callbacks::callback_e kind, HandleAbstractNode node)
@@ -3087,13 +3420,4 @@ bool PCisMultipleBranches(HandlePathConstraint Handle)
 {
 	return Handle->isMultipleBranches();
 }
-
-
-
-
-
-
-
-
-
 

@@ -18,18 +18,21 @@ type
     btnTaint: TBitBtn;
     btnslicing: TBitBtn;
     btnIr: TBitBtn;
+    btnsimply: TBitBtn;
+    btnCallback: TBitBtn;
     procedure btnStandard_testClick(Sender: TObject);
     procedure btnOp_PreClick(Sender: TObject);
     procedure btnCoverageClick(Sender: TObject);
     procedure btnTaintClick(Sender: TObject);
     procedure btnslicingClick(Sender: TObject);
     procedure btnIrClick(Sender: TObject);
+    procedure btnsimplyClick(Sender: TObject);
+    procedure btnCallbackClick(Sender: TObject);
   private
 
     procedure test6;
     procedure test7;
     procedure constraint;
-    procedure simplification;
     procedure Test_Conversion_01;
     procedure test_istruzione;
     procedure constraint1;
@@ -65,7 +68,9 @@ implementation
             forward_tainting,
             backward_slicing,
             ir,
-            test_path_constraint;
+            test_path_constraint,
+            Simplification,
+            Callback;
 {$R *.dfm}
 
 procedure TForm1.Log(msg: string);
@@ -319,10 +324,8 @@ begin
      test_taint_get_tainted_registers;
    Log(' End Test Taint============');
 
-   Log(' simplification============');
-  simplification ;
-   Log(' end simplification=============');
-   Log('') ;
+
+   Log('=================================') ;
 
    Log(' ==End Stadard Test==');
 
@@ -564,12 +567,28 @@ begin
     Log(' ==End opaque predicates==');
 end;
 
+procedure TForm1.btnsimplyClick(Sender: TObject);
+begin
+    mmoLog.Clear;
+    Log('==test Simplification==');
+    main_Simplification;
+    Log(' ==End Simplification==');
+end;
+
 procedure TForm1.btnslicingClick(Sender: TObject);
 begin
     mmoLog.Clear;
     Log('==test backward slicing==');
     main_slicing;
     Log(' ==End backward slicing==');
+end;
+
+procedure TForm1.btnCallbackClick(Sender: TObject);
+begin
+    mmoLog.Clear;
+    Log('==test Callback==');
+    main_Callback;
+    Log(' ==End Callback==');
 end;
 
 procedure TForm1.btnCoverageClick(Sender: TObject);
@@ -917,71 +936,21 @@ begin
         assert( assertTrue($5000, uAdd)= False,'Failed $4004');
 end;
 
-
-procedure TForm1.simplification;
-const trace : array[0..1] of op  = (
-                                    (addr:$400017; inst : [$48,$31,$C0]; Size:3), //* xor rax, rax */
-                                    (addr:$0;      inst :[];             Size:0)
-                                   );
-(*
-** Output:
-**
-**  Output
-**
-**  400017: xor rax, rax
-**          SymExpr 0: ref!0 = (_ bv0 64) ; XOR operation
-**
-*)
+(* if (bvxor x x) -> (_ bv0 x_size) *)
+function xor1(aApi : HandleApi; sNode: HandleAbstractNode): HandleAbstractNode;cdecl;
 var
- j         : Integer;
- api       : TApi;
- inst      : Istruzione;
- test      : cbSimplification; //reference to function(API : HandleApi; snode: HandleAbstractNode): HandleAbstractNode;
-
+  node : AbstractNode;
 begin
-  api.Create;
-  (* Set the arch *)
-  api.setArchitecture(ARCH_X86_64);
-  (* Build an instruction *)
+    node := AbstractNode(snode);
 
-  (* if (bvxor x x) -> (_ bv0 x_size) *)
-  test := function (API : HandleApi; snode: HandleAbstractNode): HandleAbstractNode
-          var
-            node : AbstractNode;
-          begin
-              node := AbstractNode(snode);
+    if node.getType = ZX_NODE then
+       node := node.Childrens[1];
 
-              if node.getType = ZX_NODE then
-                 node := node.Childrens[1];
+    if node.getType = BVXOR_NODE then
+       if node.Childrens[0].equalTo(node.Childrens[1]) then
+         Exit(  AstContext(node.Context).bv(0,node.getBitvectorSize) ) ;
 
-              if node.getType = BVXOR_NODE then
-                 if node.Childrens[0].equalTo(node.Childrens[1]) then
-                   Exit(  AstContext(node.Context).bv(0,node.getBitvectorSize) ) ;
-
-              Result := node;
-          end;
-
-
-
-  (* Record a simplification callback *)
-  //api.addCallback( cbSimplification(test(api,api)) );
-
-  api.setConcreteRegisterValue( api.getRegister(ID_REG_X86_RAX),12345 );
-
-  (* Setup opcode *)
-  inst.Create;
-  inst.setOpcode(topcode(trace[0].inst), trace[0].size);
-  inst.setAddress(trace[0].addr);
-
-  (* Process everything *)
-  api.processing(inst);
-
-  log('istruzione: '+ inst.ToStr);
-  inst.symbolicExpressions  ;
-  for j := 0 to inst.symbolicExpressions.Count -1 do
-      log( inst.symbolicExpressions.Items[j].ToStr );
-
+    Result := node;
 end;
-
 
 end.

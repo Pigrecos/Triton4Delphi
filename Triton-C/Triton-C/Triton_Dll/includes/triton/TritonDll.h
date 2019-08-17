@@ -16,6 +16,7 @@ using namespace triton;
 using namespace triton::arch;
 using namespace triton::ast;
 
+typedef triton::callbacks::Callbacks                   *HandleCall_bc;
 
 typedef triton::API                   *HandleApi;
 typedef triton::ast::AbstractNode     *hAbstractNode;
@@ -48,11 +49,13 @@ typedef uint8 * retArray;
 typedef std::list<triton::engines::symbolic::SharedSymbolicExpression>      *ListExpr;
 /*=======end todo porting for c or pascal*/
 
-typedef ComparableFunctor<void(triton::API&, const triton::arch::MemoryAccess&)>                                 *cbGetMemVal;
-typedef ComparableFunctor<void(triton::API&, const triton::arch::Register&)>                                     *cbGetRegVal;
-typedef ComparableFunctor<void(triton::API&, const triton::arch::MemoryAccess&, const triton::uint512& value)>   *cbSetMemVal;
-typedef ComparableFunctor<void(triton::API&, const triton::arch::Register&,     const triton::uint512& value)>   *cbSetRegVal;
-typedef ComparableFunctor<triton::ast::SharedAbstractNode(triton::API&, const triton::ast::SharedAbstractNode&)> *cbSimplification;
+// Callback
+typedef void(*cbGetMemVal) (HandleApi, HandleMemAcc);
+typedef void(*cbGetRegVal) (HandleApi, HandleReg);
+typedef void(*cbSetMemVal) (HandleApi, HandleMemAcc, uint64);
+typedef void(*cbSetRegVal) (HandleApi, HandleReg,uint64);
+typedef HandleAbstractNode(*cbSimplification) (HandleApi, HandleAbstractNode);
+
 
 struct _BV {
 	uint32    high;
@@ -1387,6 +1390,6 @@ extern "C"
 	//! Returns true if it is not a direct jump.
 	bool EXPORTCALL PCisMultipleBranches(HandlePathConstraint Handle);
 
-			
+	
 
 } // extern "C"

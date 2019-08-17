@@ -340,19 +340,8 @@ HandleSharedSymbolicVariable   = Pointer;  //triton::engines::symbolic::SharedSy
 
 HandleAbstractNode  = Pointer;   //std::shared_ptr<triton::ast::AbstractNode>
 
-//ComparableFunctor<void(triton::API&, const triton::arch::Register&)>
-cbGetRegVal = procedure(API : HandleApi; reg: HandleReg); cdecl;
-//ComparableFunctor<void(triton::API&, const triton::arch::Register&,     const triton::uint512& value)>
-cbSetRegVal = procedure(API : HandleApi; reg: HandleReg; value : uint64); cdecl;
-//ComparableFunctor<void(triton::API&, const triton::arch::MemoryAccess&)>
-cbGetMemVal  = procedure(API : HandleApi; mem: HandleMemAcc); cdecl;
-//ComparableFunctor<void(triton::API&, const triton::arch::MemoryAccess&, const triton::uint512& value)>
-cbSetMemVal  = procedure(API : HandleApi; mem: HandleMemAcc; value : uint64); cdecl;
-//ComparableFunctor<triton::ast::SharedAbstractNode(triton::API&, const triton::ast::SharedAbstractNode&)>
-cbSimplification    = reference to function(API : HandleApi; snode: HandleAbstractNode): HandleAbstractNode;
-
-PAddrSolver = ^AddrSolver;
-AddrSolver = record { //std::map<triton::uint32, triton::engines::solver::SolverModel>  }
+PAddrSolver = ^AddrSolver;
+AddrSolver = record { //std::map<triton::uint32, triton::engines::solver::SolverModel>  }
   numEle: uint32;
 	id    : uint32;
 	Model : HandleSolverModel;

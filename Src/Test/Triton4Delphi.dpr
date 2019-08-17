@@ -23,7 +23,9 @@ uses
   forward_tainting in 'forward_tainting.pas',
   backward_slicing in 'backward_slicing.pas',
   Ir in 'Ir.pas',
-  test_path_constraint in 'test_path_constraint.pas';
+  test_path_constraint in 'test_path_constraint.pas',
+  Simplification in 'Simplification.pas',
+  Callback in 'Callback.pas';
 
 {$R *.res}
 
