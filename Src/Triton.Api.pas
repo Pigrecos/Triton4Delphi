@@ -133,7 +133,7 @@ type
         function  getRegisterAst(reg: Registro):HandleAbstractNode; overload;
         function  getRegisterAst(inst: Istruzione ; reg: Registro):HandleAbstractNode; overload;
         function  newSymbolicExpression(node: HandleAbstractNode; comment: AnsiString = ''):symbolicExp;
-        function  newSymbolicVariable(varSize: uint32; comment: AnsiString = ''):HandleSharedSymbolicVariable;
+        function  newSymbolicVariable(varSize: uint32; comment: AnsiString = ''):SymbolicVar;
         procedure removeSymbolicExpression(symExprId: usize);
         function  createSymbolicExpression(inst: Istruzione ; node: HandleAbstractNode; dst: OpWrapper; comment : AnsiString = ''):symbolicExp;
         function  createSymbolicMemoryExpression(inst: Istruzione ; node: HandleAbstractNode; mem: MemAccess; comment: AnsiString = ''):symbolicExp;
@@ -165,8 +165,8 @@ type
         function  getTaintedSymbolicExpressions:TList<symbolicExp>;
         function  getSymbolicExpressions:TDictionary<usize,symbolicExp> ;
         function  getSymbolicVariables:TDictionary<usize,SymbolicVar> ;
-        function  getConcreteVariableValue(symVar:HandleSharedSymbolicVariable):uint64 ;
-        procedure setConcreteVariableValue(symVar: HandleSharedSymbolicVariable; value: UInt64);
+        function  getConcreteVariableValue(symVar:SymbolicVar):uint64 ;
+        procedure setConcreteVariableValue(symVar: SymbolicVar; value: UInt64);
         (* Solver engine API =========== *)
         procedure checkSolver ;
         function  getModel(node: HandleAbstractNode): TDictionary<UInt32,SolverModel> ;
@@ -466,9 +466,9 @@ begin
     Result := Triton.Core.getConcreteRegisterValue(FHApi,reg, execCallbacks)
 end;
 
-function TApiHelper.getConcreteVariableValue(symVar: HandleSharedSymbolicVariable): uint64;
+function TApiHelper.getConcreteVariableValue(symVar: SymbolicVar): uint64;
 begin
-    Result := Triton.Core.getConcreteVariableValue(FHApi, symVar)
+    Result := Triton.Core.getConcreteVariableValue(FHApi,HandleSharedSymbolicVariable( symVar) )
 end;
 
 function TApiHelper.getCpuInstance: HandleCpuInterface;
@@ -928,9 +928,9 @@ begin
     Result := symbolicExp (Triton.Core.newSymbolicExpression(FHApi, node,PAnsiChar(comment)) )
 end;
 
-function TApiHelper.newSymbolicVariable(varSize: uint32;comment: AnsiString): HandleSharedSymbolicVariable;
+function TApiHelper.newSymbolicVariable(varSize: uint32;comment: AnsiString): SymbolicVar;
 begin
-    Result := Triton.Core.newSymbolicVariable(FHApi, varSize,PAnsiChar(comment))
+    Result := SymbolicVar (Triton.Core.newSymbolicVariable(FHApi, varSize,PAnsiChar(comment)) )
 end;
 
 function TApiHelper.processCallbacks(kind: callback_e; node: HandleAbstractNode): HandleAbstractNode;
@@ -1046,9 +1046,9 @@ begin
    Triton.Core.setConcreteRegisterValue(FHApi, reg,value)
 end;
 
-procedure TApiHelper.setConcreteVariableValue(symVar: HandleSharedSymbolicVariable; value: UInt64);
+procedure TApiHelper.setConcreteVariableValue(symVar: SymbolicVar; value: UInt64);
 begin
-    Triton.Core.setConcreteVariableValue(FHApi, symVar,value)
+    Triton.Core.setConcreteVariableValue(FHApi, HandleSharedSymbolicVariable(symVar),value)
 end;
 
 procedure TApiHelper.setSolver(kind: solver_e);

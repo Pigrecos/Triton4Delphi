@@ -132,7 +132,7 @@ begin
         instruction.Create;
         instruction.setOpcode(topcode( trace[i].inst) ) ;
         Triton.processing(instruction);
-        Form1.Log(instruction.disassembly);
+        Form1.Log(string(instruction.disassembly));
 
         if instruction.branch then
         begin

@@ -2329,15 +2329,13 @@ uint32 EXPORTCALL IgetUndefinedRegisters(HandleInstruz hIstr, HandleReg *& outAr
 	size_t n = ureg.size();
 
 	outArray = new HandleReg[n];
-
-	std::vector<Register> v(n);
-	std::copy(ureg.begin(), ureg.end(),v.begin());
-
-	for (int i = 0; i < n; i++)
+	
+	uint32 i = 0;;
+	for ( auto& it: hIstr->getUndefinedRegisters())
 	{
-		outArray[i] = &v[i];
+		outArray[i] = (HandleReg)&it;
+		i++;
 	};
-
 
 	return (uint32)n;
 }
@@ -3290,7 +3288,10 @@ uint32 Node_getChildren(HandleAbstractNode Handle, HandleAbstractNode * &outArra
 	
 	for (int i = 0; i < n; i++)
 	{
-		outArray[i] = &Handle->get()->getChildren()[i];
+		std::shared_ptr<triton::ast::AbstractNode>* x = new std::shared_ptr<triton::ast::AbstractNode>;
+		memcpy(x, &Handle->get()->getChildren()[i], sizeof(std::shared_ptr<triton::ast::AbstractNode>));
+
+		outArray[i] = &*x;
 	};
 
 	
@@ -3306,7 +3307,10 @@ uint32   Node_getParents(HandleAbstractNode Handle, HandleAbstractNode * &outArr
 
 	for (int i = 0; i < n; i++)
 	{
-		outArray[i] = &Handle->get()->getParents()[i];
+		std::shared_ptr<triton::ast::AbstractNode>* x = new std::shared_ptr<triton::ast::AbstractNode>;
+		memcpy(x, &Handle->get()->getParents()[i], sizeof(std::shared_ptr<triton::ast::AbstractNode>));
+		
+		outArray[i] = &*x;
 	};
 
 
@@ -3348,6 +3352,7 @@ void Node_addChild(HandleAbstractNode Handle, HandleAbstractNode child)
 void Node_setChild(HandleAbstractNode Handle, triton::uint32 index, HandleAbstractNode child)
 {
 	Handle->get()->setChild(index, *child);
+	Handle->get()->init();
 }
 
 void Node_str(HandleAbstractNode Handle, char* &sStr)
@@ -3366,10 +3371,18 @@ void Node_init(HandleAbstractNode Handle)
 	Handle->get()->init();
 }
 
-HandleAbstractNode unrollAst(HandleAbstractNode node)
+HandleAbstractNode Node_unrollAst(HandleAbstractNode node)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = unrollAst(*node);
+
+	return  cc;
+}
+
+HandleAbstractNode Node_duplicate(HandleAbstractNode node)
+{
+	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
+	*cc = newInstance(node->get());
 
 	return  cc;
 }

@@ -1334,7 +1334,10 @@ extern "C"
 	void EXPORTCALL Node_init(HandleAbstractNode Handle) ;
 
 	//! AST C++ API - Unrolls the SSA form of a given AST.
-	HandleAbstractNode EXPORTCALL unrollAst(HandleAbstractNode node);
+	HandleAbstractNode EXPORTCALL  Node_unrollAst(HandleAbstractNode node);
+
+	//! Gets a duplicate.
+	HandleAbstractNode EXPORTCALL  Node_duplicate(HandleAbstractNode node);
 
 	// !Displays the node in ast representation.
 	void EXPORTCALL AstToStr(HandleAbstractNode node, char * &sOut);

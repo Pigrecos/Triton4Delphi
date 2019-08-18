@@ -56,6 +56,7 @@ type
       procedure addChild(child: AbstractNode);
       procedure setChild(index: uint32; child: AbstractNode);
       function  unrollAst: AbstractNode;
+      function  duplicate: AbstractNode;
       function  str: string;
       procedure init ;
 
@@ -158,10 +159,11 @@ type
       //! Init stuffs like size and eval.
       procedure  Node_init(Handle: HandleAbstractNode) ; cdecl;  external Triton_dll Name 'Node_init';
       //! AST C++ API - Unrolls the SSA form of a given AST.
-      function Node_unrollAst(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'unrollAst';
+      function Node_unrollAst(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_unrollAst';
+      //! Gets a duplicate.
+      function Node_duplicate(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_duplicate';
       // !Displays the node in ast representation.
-
-	    procedure AstToStr(hnode: HandleAbstractNode; var sOut: PAnsiChar); cdecl;  external Triton_dll Name 'AstToStr';
+      procedure AstToStr(hnode: HandleAbstractNode; var sOut: PAnsiChar); cdecl;  external Triton_dll Name 'AstToStr';
 
 implementation
     uses Triton.AstContext;
@@ -517,12 +519,14 @@ begin
     Node_setChild(FHandleAbstractNode,index,HandleAbstractNode(child));
 
     FChildrens     := getChildren;
+    FParents       := getParents;
 end;
 
 procedure AbstractNode.setParent(p: AbstractNode);
 begin
     Node_setParent(FHandleAbstractNode,HandleAbstractNode(p));
 
+    FChildrens     := getChildren;
     FParents       := getParents;
 end;
 
@@ -552,6 +556,11 @@ end;
 function AbstractNode.unrollAst: AbstractNode;
 begin
     Result := AbstractNode (Node_unrollAst(FHandleAbstractNode));
+end;
+
+function AbstractNode.duplicate: AbstractNode;
+begin
+    Result := AbstractNode (Node_duplicate(FHandleAbstractNode));
 end;
 
 end.

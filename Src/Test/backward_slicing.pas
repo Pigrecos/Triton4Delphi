@@ -165,7 +165,7 @@ begin
         // expressions. Used to refer an instruction to its expressions. Will
         // be useful to understand the slicing part.
         for se in inst.SymbolicExpressions do
-            se.Commento := inst.ToStr;
+            se.Commento := AnsiString( inst.ToStr );
 
         // Next instruction
         pc := (Triton.getConcreteRegisterValue( Triton.getRegister(ID_REG_X86_RIP)));
@@ -185,7 +185,7 @@ begin
             TArray.Sort<usize>(sizeArray);
 
             for sliceKey in sizeArray do
-               Form1.Log('[slicing]' + slicing.Items[sliceKey].Commento)
+               Form1.Log('[slicing]' + string( slicing.Items[sliceKey].Commento) )
 
         end;
 

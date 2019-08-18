@@ -162,7 +162,7 @@ const code : array[0..2] of op  = (
 
         // Create symbolic var
         comment := Format('mem_{:#0x%x}',[MemAccess(ma).address]);
-        symvar := Triton.convertMemoryToSymbolicVariable(MemAccess(ma),comment) ;
+        symvar := Triton.convertMemoryToSymbolicVariable(MemAccess(ma),AnsiString(comment)) ;
         mem_symvars := mem_symvars +  [ symvar ]
    end;
 
@@ -180,7 +180,7 @@ const code : array[0..2] of op  = (
 
         // Create symbolic var
         comment := Format('sym_reg_{%s}',[Registro(reg).name] );
-        symvar  := Triton.convertRegisterToSymbolicVariable(Registro(reg), comment);
+        symvar  := Triton.convertRegisterToSymbolicVariable(Registro(reg), AnsiString(comment));
         reg_symvars := reg_symvars + [ symvar ];
    end;
 
@@ -221,12 +221,134 @@ begin
 
 end;
 
+procedure TestIssue792_795;
+
+   procedure  setUp;
+   begin
+        Triton.Create;
+        (* Set the arch *)
+        Triton.setArchitecture(ARCH_X86_64);
+
+        Triton.enableMode(ALIGNED_MEMORY, True);
+   end;
+
+var
+ ast          : AstContext;
+ var1,var2    : symbolicVar;
+ ast_original,
+ ast_duplicate,
+ ast_unrolled,
+ var1ast,
+ var2ast,a1,b1,b2  : AbstractNode;
+begin
+    setUp;
+
+    ast := Triton.getAstContext;
+
+    var1 := Triton.newSymbolicVariable(64, 'var1');
+    var2 := Triton.newSymbolicVariable(64, 'var2') ;
+
+    ast_original  := ast.bvadd(ast.variable(var1), ast.variable(var2)) ;
+    ast_duplicate := ast_original.duplicate;
+    ast_unrolled  := ast_original.unrollAst;
+
+    Triton.setConcreteVariableValue(var1, 4);
+    Triton.setConcreteVariableValue(var2, 2) ;
+
+    assert(ast_original.evaluate = 6) ;
+    assert(ast_duplicate.evaluate= 6);
+    assert(ast_unrolled.evaluate= 6);
+
+    ast_original.setChild(0, ast.bv(1, 64)) ;
+
+    assert(ast_original.evaluate= 3) ;
+    assert(ast_duplicate.evaluate= 6) ;
+    assert(ast_unrolled.evaluate= 6);
+
+    ast_duplicate.setChild(0, ast.bv(10, 64)) ;
+
+    assert(ast_original.evaluate= 3) ;
+    assert(ast_duplicate.evaluate= 12) ;
+    assert(ast_unrolled.evaluate= 6) ;
+
+    Triton.Free;
+
+///Issue795
+    setUp;
+
+    ast := Triton.getAstContext;
+
+    var1 := Triton.newSymbolicVariable(64, 'var1');
+    var2 := Triton.newSymbolicVariable(64, 'var2') ;
+
+    var1ast := ast.variable(var1);
+    var2ast := ast.variable(var2);
+
+    a1 := ast.bvadd(var1ast, var2ast) ;
+    b1 := ast.bvnot(a1) ;
+    b2 := b1.duplicate ;
+
+    assert(Length(a1.Parents)= 1);
+    assert(Length(b2.Parents)= 0);
+    assert(Length(b2.Childrens[0].Parents)= 1);
+    assert(Length(var1ast.Parents)= 2);
+    assert(Length(var2ast.Parents)= 2);
+
+    assert(b1.evaluate = b2.evaluate) ;
+    Triton.setConcreteVariableValue(var1, 4) ;
+    Triton.setConcreteVariableValue(var2, 2) ;
+    assert(b1.evaluate = b2.evaluate);
+
+    Triton.Free;
+
+end;
+
+procedure TestIssue673;
+
+   procedure  setUp;
+   begin
+        Triton.Create;
+        (* Set the arch *)
+        Triton.setArchitecture(ARCH_X86_64);
+   end;
+var
+  inst : Istruzione;
+
+begin
+    setUp;
+
+    inst.Create;
+    inst.setOpcode([$c0,$c0,$00]); // rol al, 0
+    Triton.processing(inst);
+    assert(inst.UndefinedRegisters.Count = 0);
+    assert(inst.ReadRegisters.Count = 1) ;
+    assert(inst.WrittenRegisters.Count = 2);
+
+    inst.Create;
+    inst.setOpcode([$c0,$c0,$01]); // rol al, 1
+    Triton.processing(inst);
+    assert(inst.UndefinedRegisters.Count = 0);
+    assert(inst.ReadRegisters.Count= 2)  ;
+    assert(inst.WrittenRegisters.Count= 4) ;
+
+    inst.Create;
+    inst.setOpcode([$c0,$c0,$07]); // rol al, 7
+    Triton.processing(inst);
+    assert(inst.UndefinedRegisters.Count= 1);
+    assert(inst.ReadRegisters.Count= 2) ;
+    assert(inst.WrittenRegisters.Count= 4) ;
+
+    Triton.Free;
+
+end;
 
 procedure main_Callback;
 begin
     test_get_concrete_memory_value ;
     test_get_concrete_register_value ;
-    TestIssue789
+    TestIssue789 ;
+    TestIssue792_795  ;
+    TestIssue673
 end;
 
 end.

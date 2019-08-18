@@ -660,7 +660,7 @@ begin
   for n in model do
   begin
     log('  - Variable id  : ' + IntToStr(n.Key ));
-    log('  - Variable name: ' + n.Value.Variable.Name);
+    log('  - Variable name: ' + string( n.Value.Variable.Name)) ;
     log('  - Value        : ' + IntToHex( n.Value.Value,8));
   end;
 
@@ -730,7 +730,7 @@ begin
       begin
           log('Solver : '+n.Value.ToStr);
         log('  - Variable id  : ' + IntToStr(n.Key ));
-        log('  - Variable name: ' + n.Value.Variable.Name+' comment: ' + n.Value.Variable.Comment);
+        log('  - Variable name: ' + string( n.Value.Variable.Name)+' comment: ' + string( n.Value.Variable.Comment) );
         log('  - Value        : ' + IntToHex( n.Value.Value,8));
       end;
   end;
