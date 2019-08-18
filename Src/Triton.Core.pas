@@ -71,11 +71,11 @@ interface
         //! [**architecture api**] - Returns the number of registers according to the CPU architecture.
         function getNumberOfRegisters(vApi: HandleApi): uint32;cdecl;  external Triton_dll Name 'getNumberOfRegisters';
 
-        {  //! [**architecture api**] - Returns all registers. \sa triton::arch::x86::register_e.
-        const std::unordered_map<triton::arch::register_e, const triton::arch::Register>& getAllRegisters(void) const;
+        //! [**architecture api**] - Returns all registers. \sa triton::arch::x86::register_e.
+        function getAllRegisters(vApi: HandleApi; OutRegs: PRegIdReg): UInt32; cdecl;  external Triton_dll Name 'getAllRegisters';
 
         //! [**architecture api**] - Returns all parent registers. \sa triton::arch::x86::register_e.
-        std::set<const triton::arch::Register*> getParentRegisters(void) const;   }
+        function gettParentRegisters(Handle: HandleApi; var outRegs:pReg):uint32; cdecl;  external Triton_dll Name 'gettParentRegisters';
 
         //! [**architecture api**] - Returns the concrete value of a memory cell.
         function  getConcreteMemoryValueByte(Handle: HandleApi; addr: uint64; execCallbacks : Boolean = true):uint8;cdecl;  external Triton_dll Name 'getConcreteMemoryValueByte';
@@ -357,7 +357,7 @@ interface
         function sliceExpressions(Handle: HandleApi; expr: HandleSharedSymbolicExpression; outSlice: PIdSymExpr):uint32; cdecl;  external Triton_dll Name 'sliceExpressions';
 
         //! [**symbolic api**] - Returns the list of the tainted symbolic expressions.
-        function getTaintedSymbolicExpressions(Handle:HandleApi):ListExpr;  cdecl;  external Triton_dll Name 'getTaintedSymbolicExpressions';
+        function getTaintedSymbolicExpressions(Handle:HandleApi; var outSimbolicExpr: PSimbolicExpr):uint32  cdecl;  external Triton_dll Name 'getTaintedSymbolicExpressions';
 
         //! [**symbolic api**] - Returns all symbolic expressions as a map of <SymExprId : SymExpr>
         function getSymbolicExpressions(Handle:HandleApi; outSymMap: PIdSymExpr):UInt32 ;  cdecl;  external Triton_dll Name 'getSymbolicExpressions';

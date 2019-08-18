@@ -44,12 +44,10 @@ type
   //ComparableFunctor<triton::ast::SharedAbstractNode(triton::API&, const triton::ast::SharedAbstractNode&)>
   TSimplification    = function(API : HandleApi; snode: HandleAbstractNode): HandleAbstractNode ; cdecl;
 
-
   APathConstraint = array of PathConstraint;
 
   TApiHelper = record Helper for TApi
     private
-       //FHApi : HandleApi;
 
     public
         procedure   Create;
@@ -74,22 +72,20 @@ type
         function  getGprBitSize: uint32;
         function  getGprSize: uint32;
         function  getNumberOfRegisters: uint32;
-        {  //! [**architecture api**] - Returns all registers. \sa triton::arch::x86::register_e.
-        const std::unordered_map<triton::arch::register_e, const triton::arch::Register>& getAllRegisters(void) const;
-        //! [**architecture api**] - Returns all parent registers. \sa triton::arch::x86::register_e.
-        std::set<const triton::arch::Register*> getParentRegisters(void) const;   }
-        function   getConcreteMemoryValue(addr: uint64; execCallbacks : Boolean = true):uint8; overload;
-        function   getConcreteMemoryValue(mem: MemAccess; execCallbacks : Boolean = true): uint64; overload;
-        function   getConcreteMemoryAreaValue(baseAddr: uint64; size: usize; execCallbacks : Boolean = true):TArray<Byte>;
-        function   getConcreteRegisterValue(reg: Registro; execCallbacks : Boolean = true): uint64;
-        procedure  setConcreteMemoryValue(addr: uint64; value: uint8); overload;
-        procedure  setConcreteMemoryValue(mem: MemAccess; value: uint64); overload;
-        procedure  setConcreteMemoryAreaValue(baseAddr : uint64; values: array of Byte); overload;
-        procedure  setConcreteMemoryAreaValue(baseAddr: uint64; area : array of Byte;  size: usize); overload;
-        procedure  setConcreteRegisterValue(reg: Registro; value: uint64);
-        function   isMemoryMapped(baseAddr: uint64;  size : usize = 1): Boolean;
-        procedure  unmapMemory(baseAddr: uint64;  size : usize = 1);
-        procedure  disassembly(inst: Istruzione);
+        function  getAllRegisters: TDictionary<register_e,Registro>;
+        function  getParentRegisters:TArray<Registro>;
+        function  getConcreteMemoryValue(addr: uint64; execCallbacks : Boolean = true):uint8; overload;
+        function  getConcreteMemoryValue(mem: MemAccess; execCallbacks : Boolean = true): uint64; overload;
+        function  getConcreteMemoryAreaValue(baseAddr: uint64; size: usize; execCallbacks : Boolean = true):TArray<Byte>;
+        function  getConcreteRegisterValue(reg: Registro; execCallbacks : Boolean = true): uint64;
+        procedure setConcreteMemoryValue(addr: uint64; value: uint8); overload;
+        procedure setConcreteMemoryValue(mem: MemAccess; value: uint64); overload;
+        procedure setConcreteMemoryAreaValue(baseAddr : uint64; values: array of Byte); overload;
+        procedure setConcreteMemoryAreaValue(baseAddr: uint64; area : array of Byte;  size: usize); overload;
+        procedure setConcreteRegisterValue(reg: Registro; value: uint64);
+        function  isMemoryMapped(baseAddr: uint64;  size : usize = 1): Boolean;
+        procedure unmapMemory(baseAddr: uint64;  size : usize = 1);
+        procedure disassembly(inst: Istruzione);
         (* Processing API ============ *)
         function   processing(var inst: Istruzione): Boolean;
         procedure  initEngines;
@@ -166,7 +162,7 @@ type
         procedure concretizeMemory(addr: uint64); overload;
         procedure concretizeRegister(reg: Registro);
         function  sliceExpressions(expr: symbolicExp):TDictionary<usize,symbolicExp>;
-        function  getTaintedSymbolicExpressions:ListExpr;
+        function  getTaintedSymbolicExpressions:TList<symbolicExp>;
         function  getSymbolicExpressions:TDictionary<usize,symbolicExp> ;
         function  getSymbolicVariables:TDictionary<usize,SymbolicVar> ;
         function  getConcreteVariableValue(symVar:HandleSharedSymbolicVariable):uint64 ;
@@ -690,26 +686,28 @@ begin
     Result := Triton.Core.getSymbolicMemoryValueM(FHApi, mem)
 end;
 
+function TApiHelper.getAllRegisters: TDictionary<register_e, Registro>;
+var
+  n,i  : Integer;
+  pOut : PRegIdReg ;
+begin
+    Result := nil;
+    pOut := nil;
+    n := Triton.Core.getAllRegisters(FHApi,@pOut);
+
+    if n > 0 then
+       Result := TDictionary<register_e,Registro>.Create;
+
+    for i := 0 to n - 1 do
+        Result.Add(pOut[i].regId, Registro (pOut[i].Reg) );
+
+end;
+
 function TApiHelper.getSymbolicRegister(reg: Registro): symbolicExp;
 begin
    Result := symbolicExp (Triton.Core.getSymbolicRegister(FHApi, reg) )
 end;
 
-(*var
-  n,i  : Integer;
-  pOut : PAddrSolver ;
-
-begin
-    Result := nil;
-    pOut := nil;
-    n :=  Triton.Core.getModel(FHApi,node,@pOut );
-
-    if n > 0 then
-       Result := TDictionary<UInt32,SolverModel>.Create;
-
-    for i := 0 to n - 1 do
-        Result.Add(pOut[i].id, SolverModel (pOut[i].Model) );
-*)
 function TApiHelper.getSymbolicRegisters: TDictionary<register_e,symbolicExp>;
 var
   n,i  : Integer;
@@ -781,9 +779,33 @@ begin
         Result := Result + [ Registro (rRegs[i]) ];
 end;
 
-function TApiHelper.getTaintedSymbolicExpressions: ListExpr;
+function TApiHelper.getParentRegisters:TArray<Registro>;
+var
+  n,i     : Integer;
+  rRegs   : PReg;
 begin
-    Result := Triton.Core.getTaintedSymbolicExpressions(FHApi)
+    rRegs := nil;
+    n := Triton.Core.gettParentRegisters(FHApi,rRegs);
+
+    for i := 0 to n - 1 do
+        Result := Result + [ Registro (rRegs[i]) ];
+
+end;
+
+function TApiHelper.getTaintedSymbolicExpressions: TList<symbolicExp>;
+var
+  n,i        : Integer;
+  rSimExpr   : PSimbolicExpr;
+begin
+    Result   := nil;
+    rSimExpr := nil;
+    n := Triton.Core.getTaintedSymbolicExpressions(FHApi,rSimExpr);
+
+    if n > 0 then
+       Result := TList<symbolicExp>.Create;
+
+    for i := 0 to n - 1 do
+        Result.Add( symbolicExp (rSimExpr[i]) );
 end;
 
 function TApiHelper.getTaintEngine: HandleTaintEngine;

@@ -16,8 +16,6 @@ using namespace triton;
 using namespace triton::arch;
 using namespace triton::ast;
 
-typedef triton::callbacks::Callbacks                   *HandleCall_bc;
-
 typedef triton::API                   *HandleApi;
 typedef triton::ast::AbstractNode     *hAbstractNode;
 
@@ -36,6 +34,7 @@ typedef SharedAstContext                                *HandleAstContext;
 
 typedef triton::engines::solver::SolverInterface                      *HandleSolverInterface;
 typedef triton::engines::solver::SolverModel                          *HandleSolverModel;
+
 typedef triton::engines::symbolic::SymbolicEngine                     *HandleSymbolicEngine;
 typedef triton::engines::symbolic::SharedSymbolicExpression           *HandleSharedSymbolicExpression;
 typedef triton::engines::symbolic::SharedSymbolicVariable             *HandleSharedSymbolicVariable;
@@ -43,11 +42,6 @@ typedef triton::engines::symbolic::PathConstraint                     *HandlePat
 typedef triton::engines::taint::TaintEngine                           *HandleTaintEngine;
 
 typedef uint8 * retArray;
-
-
-/*=======todo porting for c or pascal*/
-typedef std::list<triton::engines::symbolic::SharedSymbolicExpression>      *ListExpr;
-/*=======end todo porting for c or pascal*/
 
 // Callback
 typedef void(*cbGetMemVal) (HandleApi, HandleMemAcc);
@@ -158,6 +152,10 @@ struct  MemSymE { //std::map<triton::uint64, triton::engines::symbolic::SharedSy
 	uint64                         mem;
 	HandleSharedSymbolicExpression MemSym;
 };
+struct  RegIdReg { //	std::unordered_map<triton::arch::register_e, const triton::arch::Register>
+	triton::arch::register_e       regId;
+	HandleReg           	       Reg;
+};
 struct PathDat { //std::vector<std::tuple<bool, triton::uint64, triton::uint64, HandleAbstractNode>>
 	bool   taken;
 	uint64 srcAddr;
@@ -265,13 +263,13 @@ extern "C"
 	
 	void  EXPORTCALL disassembly(HandleApi Handle, HandleInstruz inst);
 	
-	/*
+	
 	//! [**architecture api**] - Returns all registers. \sa triton::arch::x86::register_e.
-	TRITON_EXPORT const std::unordered_map<triton::arch::register_e, const triton::arch::Register>& getAllRegisters(void) const;
+	uint32 EXPORTCALL getAllRegisters(HandleApi Handle, RegIdReg **Regs) ;
 
 	//! [**architecture api**] - Returns all parent registers. \sa triton::arch::x86::register_e.
-	TRITON_EXPORT std::set<const triton::arch::Register*> getParentRegisters(void) const;
-	*/
+	uint32 EXPORTCALL getParentRegisters(HandleApi Handle, HandleReg*& outRegs) ;
+	
 
 	/* Processing API ================================================================================ */
 
@@ -520,7 +518,7 @@ extern "C"
 	uint32 EXPORTCALL sliceExpressions(HandleApi Handle, HandleSharedSymbolicExpression expr, IdSymExpr **outSlice);
 
 	//! [**symbolic api**] - Returns the list of the tainted symbolic expressions.
-	ListExpr EXPORTCALL getTaintedSymbolicExpressions(HandleApi Handle);
+	uint32 EXPORTCALL  getTaintedSymbolicExpressions(HandleApi Handle, HandleSharedSymbolicExpression *& outSimbolicExp);
 
 	//! [**symbolic api**] - Returns all symbolic expressions as a map of <SymExprId : SymExpr>
 	uint32 EXPORTCALL getSymbolicExpressions(HandleApi Handle, IdSymExpr **outSymMap) ;

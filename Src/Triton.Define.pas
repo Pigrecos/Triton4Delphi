@@ -373,6 +373,12 @@ MemSymE = record { //std::map<triton::uint64, triton::engines::symbolic::SharedS
 	MemSym : HandleSharedSymbolicExpression;
 end;
 
+PRegIdReg = ^RegIdReg;
+RegIdReg = record { //std::map<triton::uint64, triton::engines::symbolic::SharedSymbolicExpression> }
+	regId  : register_e;
+	Reg    : HandleReg;
+end;
+
 PBranch = ^Branch;
 Branch = record  //std::vector<std::tuple<bool, triton::uint64, triton::uint64, HandleAbstractNode>>
 	taken  : Boolean;
@@ -383,11 +389,8 @@ end;
 ABranch = array of Branch;
 PHandlePathConstraint = ^HandlePathConstraint;
 
-PReg      = ^HandleReg;
-
-ListExpr            = Pointer;  //std::list<triton::engines::symbolic::SharedSymbolicExpression>
-
-
+PReg          = ^HandleReg;
+PSimbolicExpr = ^HandleSharedSymbolicExpression;
 
 (**********************************************************************)
 

@@ -381,13 +381,73 @@ void  disassembly(HandleApi Handle, HandleInstruz inst)
 	Handle->disassembly(*inst);
 }
 
-/*
+uint32 mapRegsToArray(std::unordered_map<triton::arch::register_e, const triton::arch::Register> mregs, RegIdReg **OutRegs)
+{	
+	auto   n = mregs.size();
+
+	if (n < 1) return 0;
+
+	RegIdReg* a = new RegIdReg[n];
+	RegIdReg* newA = NULL;
+
+	auto i = 0;
+	for (auto elem : mregs) {
+		a[i].regId  = elem.first;
+		a[i].Reg	= HandleReg(&elem.second);
+
+		triton::arch::Register* x = new triton::arch::Register;
+		memcpy(x, &elem.second, sizeof(triton::arch::Register));
+
+		a[i].Reg = *&x;
+		i++;
+	}
+
+	newA = (RegIdReg*)realloc(*OutRegs, sizeof(RegSymE)*n);
+
+	if (newA) {
+		memcpy(newA, a, sizeof(RegSymE)*n);
+
+		*OutRegs = newA;
+	}
+	else {
+		memcpy(*OutRegs, a, sizeof(RegSymE)*n);
+	}
+
+	delete a;
+
+	return (uint32)n;
+}
+
 //! [**architecture api**] - Returns all registers. \sa triton::arch::x86::register_e.
-TRITON_EXPORT const std::unordered_map<triton::arch::register_e, const triton::arch::Register>& getAllRegisters(void) const;
+uint32 getAllRegisters(HandleApi Handle, RegIdReg **Regs)
+{
+	std::unordered_map<triton::arch::register_e, const triton::arch::Register> s = Handle->getAllRegisters();
+	auto   n = mapRegsToArray(s, Regs);
+
+	return n;
+}
 
 //! [**architecture api**] - Returns all parent registers. \sa triton::arch::x86::register_e.
-TRITON_EXPORT std::set<const triton::arch::Register*> getParentRegisters(void) const;
-*/
+uint32 getParentRegisters(HandleApi Handle, HandleReg*& outRegs)
+{
+	std::set<const triton::arch::Register*> r = Handle->getParentRegisters();
+	size_t n = r.size();
+
+	if (r.size() < 1) return 0;
+
+	outRegs = new HandleReg[n];
+
+	auto i = 0;
+	for (auto elem : r)
+	{
+		triton::arch::Register* reg = new triton::arch::Register;
+		memcpy(&reg, &elem, sizeof(triton::arch::Register));
+
+		outRegs[i] = &*reg;
+		i++;
+	};
+	return (uint32)n;
+}
 
 /* Processing API ================================================================================ */
 
@@ -1352,10 +1412,27 @@ uint32 sliceExpressions(HandleApi Handle, HandleSharedSymbolicExpression expr, I
 	return n;
 }
 
-ListExpr getTaintedSymbolicExpressions(HandleApi Handle)
+uint32 getTaintedSymbolicExpressions(HandleApi Handle, HandleSharedSymbolicExpression *& outSimbolicExp)
 {
-	std::list<triton::engines::symbolic::SharedSymbolicExpression>  static s = Handle->getTaintedSymbolicExpressions();
-	return &s;
+	std::list<triton::engines::symbolic::SharedSymbolicExpression>  r = Handle->getTaintedSymbolicExpressions();
+	size_t n = r.size();
+
+	if (r.size() < 1) return 0;
+
+	outSimbolicExp = new HandleSharedSymbolicExpression[n];
+
+	auto i = 0;
+	for (auto elem : r)
+	{
+		triton::engines::symbolic::SharedSymbolicExpression* SimExp = new triton::engines::symbolic::SharedSymbolicExpression;
+		memcpy(&SimExp, &elem, sizeof(triton::engines::symbolic::SharedSymbolicExpression));
+
+		outSimbolicExp[i] = &*SimExp;
+		i++;
+	};
+
+
+	return (uint32)n;
 }
 
 uint32 mSymToArray(std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression> mslice, IdSymExpr **outSlice)
