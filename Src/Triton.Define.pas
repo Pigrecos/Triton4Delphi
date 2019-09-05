@@ -143,6 +143,13 @@ type
       (* Must be the last item *)
       ID_REG_LAST_ITEM ); //!< must be the last item
 
+    //! The list of opcodes.
+    instruction_e = (
+       ID_INS_INVALID = 0 , //!< invalid = 0
+       {$I x86._Ins_spec.inc}
+       (* Must be the last item *)
+        ID_INS_LAST_ITEM);//!< must be the last item
+
     (*! \brief Types of prefix.
        *
        *  \details

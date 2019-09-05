@@ -1,6 +1,5 @@
 unit Triton.Core;
 
-
 {$Z4}
 
 interface
@@ -372,6 +371,9 @@ interface
         { TODO -oMax -c : Adding support uint512 23/07/2019 18:06:23 }
         //! [**symbolic api**] - Sets the concrete value of a symbolic variable.
         procedure  setConcreteVariableValue(Handle: HandleApi; symVar: HandleSharedSymbolicVariable; value: UInt64);  cdecl;  external Triton_dll Name 'setConcreteVariableValue';
+
+        //! Initializes the memory access AST (LOAD and STORE).
+	      procedure initLeaAst(Handle: HandleApi; mem: HandleMemAcc; force: Boolean = false); cdecl;  external Triton_dll Name 'initLeaAst';
 
     	(* Solver engine API ============================================================================= *)
 

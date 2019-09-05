@@ -1535,6 +1535,11 @@ void setConcreteVariableValue(HandleApi Handle, HandleSharedSymbolicVariable sym
 	Handle->setConcreteVariableValue(*symVar, value);
 }
 
+void initLeaAst(HandleApi Handle, HandleMemAcc mem, bool force)
+{
+	Handle->getSymbolicEngine()->initLeaAst(*mem, force);
+}
+
 
 /* Solver engine API ============================================================================= */
 
@@ -2330,7 +2335,7 @@ uint32 EXPORTCALL IgetUndefinedRegisters(HandleInstruz hIstr, HandleReg *& outAr
 
 	outArray = new HandleReg[n];
 	
-	uint32 i = 0;;
+	uint32 i = 0;
 	for ( auto& it: hIstr->getUndefinedRegisters())
 	{
 		outArray[i] = (HandleReg)&it;
@@ -2346,13 +2351,13 @@ uint32 EXPORTCALL IgetsymbolicExpressions(HandleInstruz hIstr, HandleSharedSymbo
 
 	outArray = new HandleSharedSymbolicExpression[n];
 
-
-	for (int i = 0; i < n; i++)
+	auto i = 0;
+	for ( auto& it : hIstr->symbolicExpressions)
 	{
-		outArray[i] = &hIstr->symbolicExpressions[i];
+		outArray[i] = (HandleSharedSymbolicExpression)&it;
+		i++;
 	};
-
-
+	
 	return (uint32)n;
 }
 
@@ -3399,6 +3404,65 @@ void AstToStr(HandleAbstractNode node,char * &sOut)
 
 	std::vector<char> chars(str.c_str(), str.c_str() + str.size() + 1u);
 	strcpy_s(sOut, str.size() + 1, &chars[0]);
+}
+
+uint32 Node_lookingForNodes(HandleAbstractNode node, HandleAbstractNode *& outArray, triton::ast::ast_e match)
+{
+	size_t n = lookingForNodes(*node, match).size();
+
+	outArray = new HandleAbstractNode[n];
+
+
+	for (int i = 0; i < n; i++)
+	{
+		std::shared_ptr<triton::ast::AbstractNode>* x = new std::shared_ptr<triton::ast::AbstractNode>;
+		memcpy(x, &lookingForNodes(*node, match)[i], sizeof(std::shared_ptr<triton::ast::AbstractNode>));
+
+		outArray[i] = &*x;
+	};
+
+
+	return (uint32)n;
+}
+
+triton::uint64 Node_hash(HandleAbstractNode node,triton::uint32 deep)
+{
+	return (uint64)node->get()->hash(deep);
+}
+
+triton::uint64 EXPORTCALL NodeInteger_getInteger(HandleAbstractNode node)
+{
+	if (node->get()->getType() == INTEGER_NODE) {
+		auto v = (IntegerNode*)node->get();
+		return (uint64)v->getInteger();
+	}
+	return 0;
+}
+
+HandleSharedSymbolicExpression EXPORTCALL NodeRef_getSymbolicExpression(HandleAbstractNode node)
+{
+	if (node->get()->getType() == REFERENCE_NODE) {
+		HandleSharedSymbolicExpression cc = new std::shared_ptr<triton::engines::symbolic::SymbolicExpression>;
+		
+		auto v = (ReferenceNode*)node->get();
+		*cc = v->getSymbolicExpression();
+
+		return cc;
+	}
+	return NULL;
+}
+
+HandleSharedSymbolicVariable EXPORTCALL NodeRef_getSymbolicVariable(HandleAbstractNode node)
+{
+	if (node->get()->getType() == VARIABLE_NODE) {
+		HandleSharedSymbolicVariable cc = new std::shared_ptr<triton::engines::symbolic::SymbolicVariable>;
+
+		auto v = (VariableNode*)node->get();
+		*cc = v->getSymbolicVariable();
+
+		return cc;
+	}
+	return NULL;
 }
 
 

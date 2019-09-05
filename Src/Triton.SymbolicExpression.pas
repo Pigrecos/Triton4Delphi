@@ -45,6 +45,7 @@ type
       procedure setoriginReg(const Value: Registro);
       procedure setType(const Value: expression_e);
       function getId: usize;
+    procedure Update;
     public
       isTainnted : Boolean;
       procedure Create(node: AbstractNode; id: usize; tipo: expression_e; comment: PAnsiChar = nil); overload;
@@ -54,21 +55,22 @@ type
 
       class operator Explicit(hSym: HandleSharedSymbolicExpression): symbolicExp;
       class operator Explicit(rSym: symbolicExp): HandleSharedSymbolicExpression;
+      class operator Implicit(hSym: HandleSharedSymbolicExpression): symbolicExp;
       class operator Implicit(rSym: symbolicExp): HandleSharedSymbolicExpression;
 
-    property tipo        : expression_e       read getType        write setType;
-    property Ast         : AbstractNode       read getAst         write setAst;
-    property newAst      : AbstractNode       read getNewAst  ;
-    property Commento    : AnsiString         read getCommento    write setCommento ;
-    property FmtCommento : AnsiString         read getfmtCommento ;
-    property FmtExpr     : AnsiString         read getfmtExpr ;
-    property id          : usize              read getId;
-    property FmtId       : AnsiString         read getfmtId ;
-    property originMemory: MemAccess          read getoriginMem   write setoriginMem;
-    property originReg   : Registro           read getoriginReg   write setoriginReg;
-    property IsMemory    : Boolean            read getIsMemory ;
-    property IsRegiter   : Boolean            read getIsRegiter ;
-    property IsSymbolized: Boolean            read getIsSymbolized ;
+    property tipo        : expression_e       read Ftipo            write setType;
+    property Ast         : AbstractNode       read FAst             write setAst;
+    property newAst      : AbstractNode       read FnewAst;
+    property Commento    : AnsiString         read FCommento        write setCommento ;
+    property FmtCommento : AnsiString         read FFormatCommento ;
+    property FmtExpr     : AnsiString         read FFormatExpr ;
+    property id          : usize              read Fid;
+    property FmtId       : AnsiString         read FFormatid ;
+    property originMemory: MemAccess          read ForiginMemory    write setoriginMem;
+    property originReg   : Registro           read ForiginRegister  write setoriginReg;
+    property IsMemory    : Boolean            read FIsMemory ;
+    property IsRegiter   : Boolean            read FIsRegiter ;
+    property IsSymbolized: Boolean            read FisSymbolized ;
   end;
 
   (*  SymbolicExpression ============================================================================== *)
@@ -126,12 +128,16 @@ procedure symbolicExp.Create(other: symbolicExp);
 begin
     ZeroMemory(@self,SizeOf(symbolicExp));
     FHS := SECreateSymbolicExpressionFrom(HandleSharedSymbolicExpression(other));
+
+    Update
 end;
 
 procedure symbolicExp.Create(node: AbstractNode; id: usize; tipo: expression_e;  comment: PAnsiChar);
 begin
     ZeroMemory(@self,SizeOf(symbolicExp));
     FHS := SECreateSymbolicExpression(HandleAbstractNode(node),id,tipo,comment);
+
+    Update
 end;
 
 procedure symbolicExp.Free;
@@ -140,11 +146,37 @@ begin
     ZeroMemory(@self,SizeOf(symbolicExp));
 end;
 
+procedure symbolicExp.Update;
+begin
+    getAst;
+    getCommento;
+    getfmtCommento;
+    getfmtExpr;
+    getfmtId;
+    getIsMemory;
+    getIsRegiter;
+    getIsSymbolized;
+    getNewAst;
+    getoriginMem;
+    getoriginReg;
+    getType;
+    getId;
+end;
+
+class operator symbolicExp.Implicit(hSym: HandleSharedSymbolicExpression): symbolicExp;
+begin
+    ZeroMemory(@Result,SizeOf(symbolicExp));
+    Result.FHS  := hSym;
+
+    Result.Update;
+end;
+
 class operator symbolicExp.Explicit(hSym: HandleSharedSymbolicExpression): symbolicExp;
 begin
     ZeroMemory(@Result,SizeOf(symbolicExp));
     Result.FHS  := hSym;
 
+    Result.Update;
 end;
 
 class operator symbolicExp.Explicit(rSym: symbolicExp): HandleSharedSymbolicExpression;

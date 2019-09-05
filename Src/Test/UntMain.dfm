@@ -11,6 +11,7 @@ object Form1: TForm1
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object pnl1: TPanel
@@ -53,7 +54,7 @@ object Form1: TForm1
       Top = 6
       Width = 113
       Height = 25
-      Caption = 'Opaque predicates test'
+      Caption = 'Op. predicates test'
       TabOrder = 1
       OnClick = btnOp_PreClick
     end

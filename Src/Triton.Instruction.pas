@@ -71,7 +71,7 @@ type
      function getReadImmediates:TDictionary<Immediate,AbstractNode>;
      function getUndefinedRegisters:TList<Registro>;
      function getsymbolicExpressions:TList<symbolicExp>;
-    function getOperands: TArray<OpWrapper>;
+     function getOperands: TArray<OpWrapper>;
    public
      tid           : UInt32;       //! The thread id of the instruction.
      address       : UInt64;       //! The address of the instruction.
@@ -101,6 +101,7 @@ type
      procedure setAddress(addr: UInt64);
      procedure setOpcode(aBuff: TOpcode;size: UInt32); overload;
      procedure setOpcode(aBuff: TOpcode); overload;
+     procedure setOpcode(aBuff: array of Byte);overload;
      procedure setLoadAccess(mem : MemAccess; node: AbstractNode);
      procedure removeLoadAccess(mem:MemAccess);
      procedure setStoreAccess(mem : MemAccess; node: AbstractNode);
@@ -357,15 +358,16 @@ function Istruzione.getsymbolicExpressions: TList<symbolicExp>;
 var
   n,i       : Integer;
   outArray  : PSymbolicEx ;
-
+  ret       : TList<symbolicExp>;
 begin
-    result := TList<symbolicExp>.Create;
-
+    ret := TList<symbolicExp>.Create;
+    outArray := nil;
     n :=  IgetsymbolicExpressions(FHIstruz,outArray);
 
     for i := 0 to n - 1 do
-       result.add( symbolicExp(outArray[i]) );
+       ret.add( symbolicExp(outArray[i]) );
 
+    Result := ret;
 end;
 
 function Istruzione.getOperands: TArray<OpWrapper>;
@@ -619,6 +621,18 @@ procedure Istruzione.setOpcode(aBuff: TOpcode);
 begin
     setOpcode(aBuff, Length(aBuff))
 end;
+
+procedure Istruzione.setOpcode(aBuff: array of Byte);
+var
+  A : TOpcode;
+  i : Integer;
+begin
+    for i := 0 to High(aBuff) do
+      A := A + [ aBuff[i] ];
+
+    setOpcode(A, Length(aBuff))
+end;
+
 
 procedure Istruzione.setPrefix(prefix: prefix_e);
 begin

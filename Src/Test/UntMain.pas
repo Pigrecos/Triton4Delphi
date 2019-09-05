@@ -2,9 +2,24 @@ unit UntMain;
 
 interface
 
+(*{$LINK 'remill\Compat.obj'}
+{$LINK 'remill\DeadStoreEliminator.obj'}
+{$LINK 'remill\Extract.obj'}
+{$LINK 'remill\FileSystem.obj'}
+{$LINK 'remill\Instruction.obj'}
+{$LINK 'remill\IntrinsicTable.obj'}
+{$LINK 'remill\Lifter.obj'}
+
+{$LINK 'remill\Name.obj'}
+{$LINK 'remill\Optimizer.obj'}
+{$LINK 'remill\OS.obj'}
+{$LINK 'remill\StateUnfolder.obj'}
+{$LINK 'remill\Util.obj'} *)
+
+
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Buttons, System.Diagnostics, System.TimeSpan,
   System.Generics.Collections, System.Generics.Defaults, Vcl.ExtCtrls;
 
 type
@@ -28,6 +43,8 @@ type
     procedure btnIrClick(Sender: TObject);
     procedure btnsimplyClick(Sender: TObject);
     procedure btnCallbackClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+
   private
 
     procedure test6;
@@ -63,14 +80,16 @@ implementation
             Triton.MemoryAccess,
             Triton.OperandWrapper,
             Triton.Define,
+
+            Callback,
+            Simplification,
             proving_opaque_predicates,
             code_coverage_crackme_xor,
             forward_tainting,
             backward_slicing,
             ir,
-            test_path_constraint,
-            Simplification,
-            Callback;
+            test_path_constraint;
+
 {$R *.dfm}
 
 procedure TForm1.Log(msg: string);
@@ -98,6 +117,7 @@ begin
 
      (* Set the arch *)
      vApi.setArchitecture(ARCH_X86_64);
+
 
      vApi.setConcreteRegisterValue( vApi.getRegister(ID_REG_X86_RAX), 12345);
 
@@ -647,7 +667,7 @@ begin
   Ctx := api.getAstContext ;
 
   (* Modify RAX's AST to build the constraint *)
-  constraint := Ctx.equal(raxFullAst, Ctx.bv(0, raxFullAst.getBitvectorSize ));
+  constraint := Ctx.equal(raxFullAst, Ctx.bv(0, raxFullAst.BitvectorSize ));
 
   //* Display RAX's AST*/
   log('constraint:  '+ constraint.ToStr);
@@ -735,6 +755,15 @@ begin
       end;
   end;
 
+end;
+
+procedure TForm1.FormShow(Sender: TObject);
+var
+  pA : string;
+begin
+    pA := ExtractFilePath( Application.ExeName);
+
+    SetCurrentDir(pA) ;
 end;
 
 procedure TForm1.Test_Conversion_01;
@@ -934,23 +963,6 @@ begin
         assert( assertTrue($4002, uAdd)= True,'Failed $4002');
         assert( assertTrue($4003, uAdd)= True,'Failed $4003');
         assert( assertTrue($5000, uAdd)= False,'Failed $4004');
-end;
-
-(* if (bvxor x x) -> (_ bv0 x_size) *)
-function xor1(aApi : HandleApi; sNode: HandleAbstractNode): HandleAbstractNode;cdecl;
-var
-  node : AbstractNode;
-begin
-    node := AbstractNode(snode);
-
-    if node.getType = ZX_NODE then
-       node := node.Childrens[1];
-
-    if node.getType = BVXOR_NODE then
-       if node.Childrens[0].equalTo(node.Childrens[1]) then
-         Exit(  AstContext(node.Context).bv(0,node.getBitvectorSize) ) ;
-
-    Result := node;
 end;
 
 end.

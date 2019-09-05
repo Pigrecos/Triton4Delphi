@@ -31,8 +31,10 @@ type
       procedure Free;
       function ToStr:string;
 
+      class operator Implicit(hSymVar: HandleSharedSymbolicVariable): SymbolicVar;
       class operator Explicit(hSymVar: HandleSharedSymbolicVariable): SymbolicVar;
       class operator Explicit(rSymVar: SymbolicVar): HandleSharedSymbolicVariable;
+      class operator Equal(s1,s2:SymbolicVar):Boolean;
 
       property Tipo    : variable_e read getType;
       property Alias   : AnsiString read getAlias   write setAlias;
@@ -95,6 +97,17 @@ procedure SymbolicVar.Create(other: SymbolicVar);
 begin
     ZeroMemory(@self,SizeOf(SymbolicVar));
     FHSymVar := SVCreateSymbolicVariableFrom( HandleSharedSymbolicVariable(other) )
+end;
+
+class operator SymbolicVar.Equal(s1, s2: SymbolicVar): Boolean;
+begin
+     Result := s1.FHSymVar = s2.FHSymVar;
+end;
+
+class operator SymbolicVar.Implicit(hSymVar: HandleSharedSymbolicVariable): SymbolicVar;
+begin
+    ZeroMemory(@Result,SizeOf(SymbolicVar));
+    Result.FHSymVar :=  hSymVar;
 end;
 
 class operator SymbolicVar.Explicit(rSymVar: SymbolicVar): HandleSharedSymbolicVariable;

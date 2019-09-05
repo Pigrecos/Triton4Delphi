@@ -11,11 +11,10 @@ interface
 type
   PAHNode = ^HandleAbstractNode;
 
+  PAbstractNode = ^AbstractNode;
   AbstractNode = record
     private
       FHandleAbstractNode : HandleAbstractNode;
-      FChildrens          : TArray<AbstractNode> ;
-      FParents            : TArray<AbstractNode> ;
       FTipo               : ast_e;
       FBitvectorSize      : uint32;
       FBitvectorMask      : UInt64;
@@ -23,23 +22,9 @@ type
       FisSymbolized       : Boolean;
       FisLogical          : Boolean;
 
-      function  getChildren: TArray<AbstractNode>;
-      function  getParents:  TArray<AbstractNode>;
+      function  getChildren:TArray<AbstractNode>;
+      function  getParents: TArray<AbstractNode>;
       function  getContext: HandleAstContext ;
-      procedure Update;
-      function  IsNodeAssigned: Boolean;
-
-    public
-      procedure Create(tipo: ast_e; ctxt: HandleAstContext);
-      procedure Free;
-
-      //comparasion
-      function Equal               (n1: AbstractNode): AbstractNode;
-      function NotEqual            (n1: AbstractNode): AbstractNode;
-      function LessThanOrEqual     (n1: AbstractNode): AbstractNode;
-      function GreaterThanOrEqual  (n1: AbstractNode): AbstractNode;
-      function LessThan            (n1: AbstractNode): AbstractNode;
-      function GreaterThan         (n1: AbstractNode): AbstractNode;
 
       function  getType: ast_e ;
       function  getBitvectorSize: uint32 ;
@@ -47,6 +32,23 @@ type
       function  isSigned: Boolean ;
       function  isSymbolized:Boolean ;
       function  isLogical: Boolean ;
+
+      procedure Update;
+
+    public
+      procedure Create(tipo: ast_e; ctxt: HandleAstContext);
+      procedure Free;
+      function GetPointer: Pointer;
+      //comparasion
+      function Equal               (n1: AbstractNode): AbstractNode;
+      function NotEqual            (n1: AbstractNode): AbstractNode;
+      function LessThanOrEqual     (n1: AbstractNode): AbstractNode;
+      function GreaterThanOrEqual  (n1: AbstractNode): AbstractNode;
+      function LessThan            (n1: AbstractNode): AbstractNode;
+      function GreaterThan         (n1: AbstractNode): AbstractNode;
+      //
+      function  IsNodeAssigned: Boolean;
+      function  GetHash(deep: UInt32): Uint64;
       function  equalTo(other: AbstractNode): Boolean ;
       function  evaluate: uint64 ;
       procedure removeParent(p: AbstractNode);
@@ -55,6 +57,13 @@ type
       procedure setBitvectorSize(size: uint32);
       procedure addChild(child: AbstractNode);
       procedure setChild(index: uint32; child: AbstractNode);
+      function  lookingForNodes(match : ast_e = ANY_NODE):TArray<AbstractNode>;
+      // solo per IntegerNode
+      function  getInteger: UInt64;
+      // solo per RefereceNode
+	    function  getSymbolicExpression: HandleSharedSymbolicExpression;
+      // solo per VariableNode
+	    function  getSymbolicVariable: HandleSharedSymbolicVariable;
       function  unrollAst: AbstractNode;
       function  duplicate: AbstractNode;
       function  str: string;
@@ -160,15 +169,28 @@ type
       procedure  Node_init(Handle: HandleAbstractNode) ; cdecl;  external Triton_dll Name 'Node_init';
       //! AST C++ API - Unrolls the SSA form of a given AST.
       function Node_unrollAst(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_unrollAst';
+      //! Returns a deque of collected matched nodes via a depth-first pre order traversal.
+	    function Node_lookingForNodes(node: HandleAbstractNode; var outArray: PAHNode; match : ast_e = ANY_NODE): UInt32; cdecl;  external Triton_dll Name 'Node_lookingForNodes';
       //! Gets a duplicate.
       function Node_duplicate(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_duplicate';
       // !Displays the node in ast representation.
       procedure AstToStr(hnode: HandleAbstractNode; var sOut: PAnsiChar); cdecl;  external Triton_dll Name 'AstToStr';
+      //! Returns the has of the tree. The hash is computed recursively on the whole tree.
+	    function Node_hash(node: HandleAbstractNode; deep: UInt32): uint64; cdecl;  external Triton_dll Name 'Node_hash';
+      // !descendig node particular procedure //todo support uint512
+	    function  NodeInteger_getInteger(node: HandleAbstractNode): UInt64; cdecl;  external Triton_dll Name 'NodeInteger_getInteger';
+	    function  NodeRef_getSymbolicExpression(node: HandleAbstractNode): HandleSharedSymbolicExpression; cdecl;  external Triton_dll Name 'NodeRef_getSymbolicExpression';
+	    function  NodeRef_getSymbolicVariable(node: HandleAbstractNode): HandleSharedSymbolicVariable;  cdecl;  external Triton_dll Name 'NodeRef_getSymbolicVariable';
 
 implementation
     uses Triton.AstContext;
 
 { AbstractNode }
+
+function AbstractNode.GetPointer:Pointer;
+begin
+    Result := Pointer(NativeUInt(FHandleAbstractNode^))
+end;
 
 procedure AbstractNode.Create(tipo: ast_e;  ctxt: HandleAstContext);
 begin
@@ -192,7 +214,6 @@ begin
     ZeroMemory(@Result,SizeOf(AbstractNode));
     Result.FHandleAbstractNode  := hNode ;
     Result.Update;
-
 end;
 
 class operator AbstractNode.Explicit(rNode: AbstractNode): HandleAbstractNode;
@@ -205,7 +226,6 @@ begin
     ZeroMemory(@Result,SizeOf(AbstractNode));
     Result.FHandleAbstractNode  := hNode ;
     Result.Update;
-
 end;
 
 procedure AbstractNode.Update;
@@ -247,6 +267,11 @@ begin
      Result := Node_getContext(FHandleAbstractNode)
 end;
 
+function AbstractNode.GetHash(deep: UInt32): Uint64;
+begin
+    Result := Node_hash(FHandleAbstractNode,deep);
+end;
+
 function AbstractNode.getType: ast_e;
 begin
      Result := Node_getType(FHandleAbstractNode)
@@ -271,7 +296,7 @@ function AbstractNode.getChildren: TArray<AbstractNode>;
 var
   n,i       : Integer;
   outArray  : PAHNode ;
-
+  FChildrens: TArray<AbstractNode>;
 begin
 
     n :=  Node_getChildren(FHandleAbstractNode,outArray);
@@ -285,9 +310,9 @@ end;
 
 function AbstractNode.getParents: TArray<AbstractNode>;
 var
-  n,i     : Integer;
-  outArray: PAHNode ;
-
+  n,i      : Integer;
+  outArray : PAHNode ;
+  FParents : TArray<AbstractNode>;
 begin
     outArray := nil;
     n :=  Node_getParents(FHandleAbstractNode,outArray);
@@ -297,6 +322,21 @@ begin
        FParents := FParents + [ AbstractNode(outArray[i]) ] ;
 
     Result := FParents;
+end;
+
+function AbstractNode.getInteger: UInt64;
+begin
+    Result := NodeInteger_getInteger(FHandleAbstractNode)
+end;
+
+function AbstractNode.getSymbolicExpression: HandleSharedSymbolicExpression;
+begin
+    Result := NodeRef_getSymbolicExpression(FHandleAbstractNode);
+end;
+
+function AbstractNode.getSymbolicVariable: HandleSharedSymbolicVariable;
+begin
+    Result := NodeRef_getSymbolicVariable(FHandleAbstractNode);
 end;
 
 procedure AbstractNode.init;
@@ -410,6 +450,23 @@ begin
     Result := res;
 end;
 
+function AbstractNode.lookingForNodes(match: ast_e): TArray<AbstractNode>;
+var
+  n,i     : Integer;
+  outArray: PAHNode ;
+  res     : TArray<AbstractNode>;
+begin
+    outArray := nil;
+    n :=  Node_lookingForNodes(FHandleAbstractNode,outArray,match);
+
+    res := [];
+    for i := 0 to n - 1 do
+       res := res + [ AbstractNode(outArray[i]) ] ;
+
+    Result := res;
+
+end;
+
 class operator AbstractNode.LogicalNot(n1: AbstractNode): AbstractNode;
 var
   res : AbstractNode;
@@ -496,15 +553,11 @@ end;
 procedure AbstractNode.addChild(child: AbstractNode);
 begin
     Node_addChild(FHandleAbstractNode,HandleAbstractNode(child));
-
-    FChildrens     := getChildren;
 end;
 
 procedure AbstractNode.removeParent(p: AbstractNode);
 begin
     Node_removeParent(FHandleAbstractNode,HandleAbstractNode(p));
-
-    FParents       := getParents;
 end;
 
 procedure AbstractNode.setBitvectorSize(size: uint32);
@@ -517,24 +570,16 @@ end;
 procedure AbstractNode.setChild(index: uint32; child: AbstractNode);
 begin
     Node_setChild(FHandleAbstractNode,index,HandleAbstractNode(child));
-
-    FChildrens     := getChildren;
-    FParents       := getParents;
 end;
 
 procedure AbstractNode.setParent(p: AbstractNode);
 begin
     Node_setParent(FHandleAbstractNode,HandleAbstractNode(p));
-
-    FChildrens     := getChildren;
-    FParents       := getParents;
 end;
 
 procedure AbstractNode.setParents(p: PAHNode; size: uint32);
 begin
     Node_setParents(FHandleAbstractNode,p,size);
-
-    FParents       := getParents;
 end;
 
 function AbstractNode.str: string;

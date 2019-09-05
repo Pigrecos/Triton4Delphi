@@ -93,7 +93,7 @@ type
         procedure  reset;
         (* IR API ============== *)
         procedure  checkIrBuilder;
-        function   buildSemantics(inst: Istruzione): Boolean;
+        function   buildSemantics(var inst: Istruzione): Boolean;
         function   getAstContext: AstContext;
         (* AST Representation API ========== *)
         function   getAstRepresentationMode:uint32 ;
@@ -167,6 +167,7 @@ type
         function  getSymbolicVariables:TDictionary<usize,SymbolicVar> ;
         function  getConcreteVariableValue(symVar:SymbolicVar):uint64 ;
         procedure setConcreteVariableValue(symVar: SymbolicVar; value: UInt64);
+        procedure initLeaAst(mem: MemAccess; force: Boolean = false);
         (* Solver engine API =========== *)
         procedure checkSolver ;
         function  getModel(node: HandleAbstractNode): TDictionary<UInt32,SolverModel> ;
@@ -291,9 +292,10 @@ begin
     Triton.Core.assignSymbolicExpressionToRegister(FHApi,se,reg)
 end;
 
-function TApiHelper.buildSemantics(inst: Istruzione): Boolean;
+function TApiHelper.buildSemantics(var inst: Istruzione): Boolean;
 begin
-    Result := Triton.Core.buildSemantics(FHApi,inst)
+    Result := Triton.Core.buildSemantics(FHApi,inst);
+    inst.Reload;
 end;
 
 procedure TApiHelper.checkArchitecture;
@@ -816,6 +818,11 @@ end;
 procedure TApiHelper.initEngines;
 begin
     Triton.Core.initEngines(FHApi)
+end;
+
+procedure TApiHelper.initLeaAst(mem: MemAccess; force: Boolean);
+begin
+    Triton.Core.initLeaAst(FHApi,mem,force);
 end;
 
 function TApiHelper.isArchitectureValid: Boolean;

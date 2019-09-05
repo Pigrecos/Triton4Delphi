@@ -532,6 +532,9 @@ extern "C"
 	//! [**symbolic api**] - Sets the concrete value of a symbolic variable.
 	void EXPORTCALL setConcreteVariableValue(HandleApi Handle, HandleSharedSymbolicVariable symVar, const triton::uint64 value);
 
+	//! Initializes the memory access AST (LOAD and STORE).
+	void EXPORTCALL initLeaAst(HandleApi Handle, HandleMemAcc mem, bool force = false);
+
 	/* Solver engine API ============================================================================= */
 
 	//! [**solver api**] - Raises an exception if the solver engine is not initialized.
@@ -1341,6 +1344,21 @@ extern "C"
 
 	// !Displays the node in ast representation.
 	void EXPORTCALL AstToStr(HandleAbstractNode node, char * &sOut);
+
+	//! Returns a deque of collected matched nodes via a depth-first pre order traversal.
+	uint32 EXPORTCALL Node_lookingForNodes(HandleAbstractNode node, HandleAbstractNode * &outArray,triton::ast::ast_e match = ANY_NODE);
+
+	//! Returns the has of the tree. The hash is computed recursively on the whole tree.
+	triton::uint64 EXPORTCALL Node_hash(HandleAbstractNode node, triton::uint32 deep) ;
+
+	//! descendig node particular procedure //todo support uint512 
+	triton::uint64 EXPORTCALL  NodeInteger_getInteger(HandleAbstractNode node);
+
+	//! descendig node particular procedure //todo support uint512 
+	HandleSharedSymbolicExpression EXPORTCALL  NodeRef_getSymbolicExpression(HandleAbstractNode node);
+
+	//! descendig node particular procedure //todo support uint512 
+	HandleSharedSymbolicVariable EXPORTCALL  NodeRef_getSymbolicVariable(HandleAbstractNode node);
 
 	/*  Solver Model ======================================================================== */
 
