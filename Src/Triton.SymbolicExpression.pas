@@ -45,7 +45,7 @@ type
       procedure setoriginReg(const Value: Registro);
       procedure setType(const Value: expression_e);
       function getId: usize;
-    procedure Update;
+      function Update: Boolean;
     public
       isTainnted : Boolean;
       procedure Create(node: AbstractNode; id: usize; tipo: expression_e; comment: PAnsiChar = nil); overload;
@@ -146,21 +146,26 @@ begin
     ZeroMemory(@self,SizeOf(symbolicExp));
 end;
 
-procedure symbolicExp.Update;
+function symbolicExp.Update:Boolean;
 begin
-    getAst;
-    getCommento;
-    getfmtCommento;
-    getfmtExpr;
-    getfmtId;
-    getIsMemory;
-    getIsRegiter;
-    getIsSymbolized;
-    getNewAst;
-    getoriginMem;
-    getoriginReg;
-    getType;
-    getId;
+    Result := True;
+    try
+      getAst;
+      getCommento;
+      getfmtCommento;
+      getfmtExpr;
+      getfmtId;
+      getIsMemory;
+      getIsRegiter;
+      getIsSymbolized;
+      getNewAst;
+      getoriginMem;
+      getoriginReg;
+      getType;
+      getId;
+    except
+      Result := False;
+    end;
 end;
 
 class operator symbolicExp.Implicit(hSym: HandleSharedSymbolicExpression): symbolicExp;
@@ -168,7 +173,8 @@ begin
     ZeroMemory(@Result,SizeOf(symbolicExp));
     Result.FHS  := hSym;
 
-    Result.Update;
+    if not Result.Update then
+       ZeroMemory(@Result,SizeOf(symbolicExp));
 end;
 
 class operator symbolicExp.Explicit(hSym: HandleSharedSymbolicExpression): symbolicExp;
@@ -176,7 +182,8 @@ begin
     ZeroMemory(@Result,SizeOf(symbolicExp));
     Result.FHS  := hSym;
 
-    Result.Update;
+    if not Result.Update then
+       ZeroMemory(@Result,SizeOf(symbolicExp));
 end;
 
 class operator symbolicExp.Explicit(rSym: symbolicExp): HandleSharedSymbolicExpression;

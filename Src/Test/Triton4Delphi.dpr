@@ -24,8 +24,10 @@ uses
   backward_slicing in 'backward_slicing.pas',
   Ir in 'Ir.pas',
   test_path_constraint in 'test_path_constraint.pas',
-  Simplification in 'Simplification.pas',
-  Callback in 'Callback.pas';
+  Callback in 'Callback.pas',
+  Vcl.Themes,
+  Vcl.Styles,
+  Simplification in 'Simplification.pas';
 
 {$R *.res}
 

@@ -24,11 +24,14 @@ type
 
   TApi = record
     private
-       FHApi : HandleApi;
+       FHApi        : HandleApi;
+       FArchitecture: architecture_e;
     public
        class operator Implicit(rApi: TApi): HandleApi;
        class Operator Explicit(hApi: HandleApi):TApi;
        class Operator Explicit(rApi: TApi):HandleApi;
+
+       property Architecture : architecture_e read FArchitecture ;
   end;
 
   //ComparableFunctor<void(triton::API&, const triton::arch::Register&)>
@@ -85,7 +88,7 @@ type
         procedure setConcreteRegisterValue(reg: Registro; value: uint64);
         function  isMemoryMapped(baseAddr: uint64;  size : usize = 1): Boolean;
         procedure unmapMemory(baseAddr: uint64;  size : usize = 1);
-        procedure disassembly(inst: Istruzione);
+        procedure disassembly(var inst: Istruzione);
         (* Processing API ============ *)
         function   processing(var inst: Istruzione): Boolean;
         procedure  initEngines;
@@ -196,8 +199,8 @@ type
         function  taintMemory(addr: uint64): Boolean ;  overload;
         function  taintMemory(mem: MemAccess ): Boolean ; overload;
         function  taintRegister(reg: Registro): Boolean ;
-        function  untaintMemory(addr: uint64): Boolean ;
-        function  untaintMemoryMem(mem: MemAccess ): Boolean ;
+        function  untaintMemory(addr: uint64): Boolean ;  overload;
+        function  untaintMemory(mem: MemAccess ): Boolean ; overload;
         function  untaintRegister(reg: Registro): Boolean ;
         function  taintUnion(op1,op2: OpWrapper): Boolean ;
         function  taintAssignment(op1,op2: OpWrapper): Boolean ;
@@ -213,6 +216,7 @@ type
         function  taintAssignmentRegisterImmediate(Dst: Registro): Boolean ;
         function  taintAssignmentRegisterMemory(Dst: Registro; Src: MemAccess ): Boolean ;
         function  taintAssignmentRegisterRegister(Dst: Registro; Src: Registro): Boolean ;
+
 
         {class operator Implicit(rApi: TApi): HandleApi;
                 class Operator Explicit(hApi: HandleApi):TApi;
@@ -403,9 +407,10 @@ begin
     Result := symbolicExp (Triton.Core.createSymbolicVolatileExpression(FHApi,inst,node,PAnsiChar( comment)) )
 end;
 
-procedure TApiHelper.disassembly(inst: Istruzione);
+procedure TApiHelper.disassembly(var inst: Istruzione);
 begin
-    Triton.Core.disassembly(FHApi,inst)
+    Triton.Core.disassembly(FHApi,inst) ;
+    inst.Reload;
 end;
 
 procedure TApiHelper.enableMode(mode: mode_e; flag: Boolean);
@@ -523,8 +528,8 @@ begin
     pOut := nil;
     n :=  Triton.Core.getModel(FHApi,node,@pOut );
 
-    if n > 0 then
-       Result := TDictionary<UInt32,SolverModel>.Create;
+    //if n > 0 then // Added by Max remove possibility of exception error when accessing count model 02/10/2019 18:48:56
+    Result := TDictionary<UInt32,SolverModel>.Create;
 
     for i := 0 to n - 1 do
         Result.Add(pOut[i].id, SolverModel (pOut[i].Model) );
@@ -650,13 +655,12 @@ var
   n,i  : Integer;
   pOut : PMemSymE ;
 begin
-    Result := nil;
     pOut   := nil;
 
     n  := Triton.Core.getSymbolicMemory(FHApi,@pOut);
 
-    if n > 0 then
-       Result := TDictionary<UInt64,symbolicExp>.Create;
+    // remove possibility of memory access violation
+    Result := TDictionary<UInt64,symbolicExp>.Create;
 
     for i := 0 to n - 1 do
         Result.Add(pOut[i].mem, symbolicExp (pOut[i].MemSym) )
@@ -707,7 +711,7 @@ end;
 
 function TApiHelper.getSymbolicRegister(reg: Registro): symbolicExp;
 begin
-   Result := symbolicExp (Triton.Core.getSymbolicRegister(FHApi, reg) )
+    Result := symbolicExp ( Triton.Core.getSymbolicRegister(FHApi, reg) )
 end;
 
 function TApiHelper.getSymbolicRegisters: TDictionary<register_e,symbolicExp>;
@@ -1020,7 +1024,8 @@ end;
 
 procedure TApiHelper.setArchitecture(arch: architecture_e);
 begin
-   Triton.Core.setArchitecture(FHApi, arch)
+   Triton.Core.setArchitecture(FHApi, arch);
+   FArchitecture := arch;
 end;
 
 procedure TApiHelper.setAstRepresentationMode(mode: uint32);
@@ -1190,7 +1195,7 @@ begin
     Result := Triton.Core.untaintMemory(FHApi,addr)
 end;
 
-function TApiHelper.untaintMemoryMem(mem: MemAccess): Boolean;
+function TApiHelper.untaintMemory(mem: MemAccess): Boolean;
 begin
     Result := Triton.Core.untaintMemoryMem(FHApi, mem)
 end;

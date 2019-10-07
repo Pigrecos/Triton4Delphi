@@ -84,42 +84,6 @@ var
 
 
 
-// This function initializes the context memory.
-procedure initContext;
-begin
-    // Define our input context
-    Triton.setConcreteMemoryValue($1000, ord('a'));
-    Triton.setConcreteMemoryValue($1001, ord('b'));
-    Triton.setConcreteMemoryValue($1002, ord('c'));
-    Triton.setConcreteMemoryValue($1003, ord('d'));
-    Triton.setConcreteMemoryValue($1004, ord('e'));
-
-    // Define the address of the serial pointer. The address of the serial pointer
-    // must be the same that the one hardcoded into the targeted function. However,
-    // the serial pointer (here $900000) is arbitrary.
-    Triton.setConcreteMemoryValue($601040, $00) ;
-    Triton.setConcreteMemoryValue($601041, $00) ;
-    Triton.setConcreteMemoryValue($601042, $90) ;
-
-    // Define the serial context. We store the serial content located on our arbitrary
-    // serial pointer ($900000).
-    Triton.setConcreteMemoryValue($900000, $31) ;
-    Triton.setConcreteMemoryValue($900001, $3e) ;
-    Triton.setConcreteMemoryValue($900002, $3d) ;
-    Triton.setConcreteMemoryValue($900003, $26) ;
-    Triton.setConcreteMemoryValue($900004, $31) ;
-
-    // Point RDI on our buffer. The address of our buffer is arbitrary. We just need
-    // to point the RDI register on it as first argument of our targeted function.
-    Triton.setConcreteRegisterValue( Triton.getRegister(ID_REG_X86_RDI), $1000);
-
-    // Setup stack on an abitrary address.
-    Triton.setConcreteRegisterValue( Triton.getRegister(ID_REG_X86_RSP), $7fffffff);
-    Triton.setConcreteRegisterValue( Triton.getRegister(ID_REG_X86_RBP), $7fffffff);
-
-end;
-
-
 procedure main_taint;
 var
   inst       : istruzione;
