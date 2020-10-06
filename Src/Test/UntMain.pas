@@ -645,7 +645,7 @@ begin
   inst.setOpcode(topcode(trace[0].inst), trace[0].size);
 
   (* Define RAX as symbolic variable *)
-  api.convertRegisterToSymbolicVariable( api.getRegister(ID_REG_X86_RAX) );
+  api.symbolizeRegister( api.getRegister(ID_REG_X86_RAX) );
 
   (* Process everything *)
   api.processing(inst);
@@ -655,7 +655,7 @@ begin
   Log('Exp. simbolica: '+raxSymS.ToStr);
 
   (* Get the RAX full AST *)
-  raxFullAst := raxSymS.Ast.unrollAst;
+  raxFullAst := raxSymS.Ast.unroll;
 
   log('test - raxFullAst.Childrens[0] '+ raxFullAst.Childrens[0].str );
   log('test - raxFullAst.Childrens[1] '+ raxFullAst.Childrens[1].ToStr );
@@ -711,7 +711,7 @@ begin
   api.setArchitecture(ARCH_X86_64);
 
   (* Make eax symbolic *)
-  api.convertRegisterToSymbolicVariable( api.getRegister(ID_REG_X86_EAX),'eax' );
+  api.symbolizeRegister( api.getRegister(ID_REG_X86_EAX),'eax' );
 
   (* # cmp eax, 4 *)
   inst.Create;
@@ -724,7 +724,7 @@ begin
   api.processing(inst);
 
   (* #  Build rip *)
-  rip := api.getSymbolicRegister( api.getRegister(ID_REG_X86_RIP) ).Ast.unrollAst;
+  rip := api.getSymbolicRegister( api.getRegister(ID_REG_X86_RIP) ).Ast.unroll;
 
   //* Display rip's AST*/
   log('rip expr: '+ rip.ToStr);
@@ -899,7 +899,7 @@ var
               begin
                 Result := Ord(Left.id)-ord(Right.id);
               end);
-
+     TArray.Sort<Registro>(regs,Comparison);
      Result :=  TArray.BinarySearch<Registro>(regs,v,FoundIndex,Comparison)
  end;
 

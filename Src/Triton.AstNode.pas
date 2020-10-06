@@ -57,14 +57,14 @@ type
       procedure setBitvectorSize(size: uint32);
       procedure addChild(child: AbstractNode);
       procedure setChild(index: uint32; child: AbstractNode);
-      function  lookingForNodes(match : ast_e = ANY_NODE):TArray<AbstractNode>;
+      function  SearchNodes(match : ast_e = ANY_NODE):TArray<AbstractNode>;
       // solo per IntegerNode
       function  getInteger: UInt64;
       // solo per RefereceNode
 	    function  getSymbolicExpression: HandleSharedSymbolicExpression;
       // solo per VariableNode
 	    function  getSymbolicVariable: HandleSharedSymbolicVariable;
-      function  unrollAst: AbstractNode;
+      function  unroll   : AbstractNode;
       function  duplicate: AbstractNode;
       function  str: string;
       procedure init ;
@@ -168,9 +168,9 @@ type
       //! Init stuffs like size and eval.
       procedure  Node_init(Handle: HandleAbstractNode) ; cdecl;  external Triton_dll Name 'Node_init';
       //! AST C++ API - Unrolls the SSA form of a given AST.
-      function Node_unrollAst(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_unrollAst';
+      function Node_unroll(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_unroll';
       //! Returns a deque of collected matched nodes via a depth-first pre order traversal.
-	    function Node_lookingForNodes(node: HandleAbstractNode; var outArray: PAHNode; match : ast_e = ANY_NODE): UInt32; cdecl;  external Triton_dll Name 'Node_lookingForNodes';
+	    function Node_search(node: HandleAbstractNode; var outArray: PAHNode; match : ast_e = ANY_NODE): UInt32; cdecl;  external Triton_dll Name 'Node_search';
       //! Gets a duplicate.
       function Node_duplicate(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_duplicate';
       // !Displays the node in ast representation.
@@ -213,7 +213,8 @@ class operator AbstractNode.implicit(hNode: HandleAbstractNode): AbstractNode;
 begin
     ZeroMemory(@Result,SizeOf(AbstractNode));
     Result.FHandleAbstractNode  := hNode ;
-    Result.Update;
+    if Assigned(hNode) then
+        Result.Update;
 end;
 
 class operator AbstractNode.Explicit(rNode: AbstractNode): HandleAbstractNode;
@@ -224,8 +225,11 @@ end;
 class operator AbstractNode.Explicit(hNode: HandleAbstractNode): AbstractNode;
 begin
     ZeroMemory(@Result,SizeOf(AbstractNode));
-    Result.FHandleAbstractNode  := hNode ;
-    Result.Update;
+    if hNode <> nil then
+    begin
+        Result.FHandleAbstractNode  := hNode ;
+        Result.Update;
+    end;
 end;
 
 procedure AbstractNode.Update;
@@ -450,14 +454,14 @@ begin
     Result := res;
 end;
 
-function AbstractNode.lookingForNodes(match: ast_e): TArray<AbstractNode>;
+function AbstractNode.SearchNodes(match: ast_e): TArray<AbstractNode>;
 var
   n,i     : Integer;
   outArray: PAHNode ;
   res     : TArray<AbstractNode>;
 begin
     outArray := nil;
-    n :=  Node_lookingForNodes(FHandleAbstractNode,outArray,match);
+    n :=  Node_search(FHandleAbstractNode,outArray,match);
 
     res := [];
     for i := 0 to n - 1 do
@@ -598,9 +602,9 @@ begin
     Result := string(p);
 end;
 
-function AbstractNode.unrollAst: AbstractNode;
+function AbstractNode.unroll: AbstractNode;
 begin
-    Result := AbstractNode (Node_unrollAst(FHandleAbstractNode));
+    Result := AbstractNode (Node_unroll(FHandleAbstractNode));
 end;
 
 function AbstractNode.duplicate: AbstractNode;

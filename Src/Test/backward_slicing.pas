@@ -139,7 +139,7 @@ begin
     Triton.setArchitecture(ARCH_X86_64);
 
     // Symbolic optimization
-    Triton.enableMode(ALIGNED_MEMORY, True) ;
+    Triton.SetMode(ALIGNED_MEMORY, True) ;
     Triton.setAstRepresentationMode(Ord(PYTHON_REPRESENTATION));
 
     // Define entry point

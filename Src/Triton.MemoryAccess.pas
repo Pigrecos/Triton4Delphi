@@ -109,6 +109,7 @@ implementation
 
 procedure MemAccess.GetInternalData;
 begin
+    ZeroMemory(@FInternalMem,SizeOf(_memAccess));
     FInternalMem := RefMemToMem(FHMem);
 
     address      := FInternalMem.address;
@@ -118,7 +119,7 @@ begin
     indexReg     := Registro(FInternalMem.indexReg);
     displacement := Immediate(FInternalMem.displacement);
     scale        := Immediate(FInternalMem.scale);
-    leaAST       := FInternalMem.leaAST;
+    leaAST       := AbstractNode( FInternalMem.leaAST);
     Tipo         := FInternalMem.Tipo;
     Size         := FInternalMem.Size;
     BitSize      := FInternalMem.BitSize;

@@ -134,7 +134,7 @@ var
   seen_mem    : TArray<uint64>;
 procedure TestIssue789;
 const code : array[0..2] of op  = (
-                                    (addr:$400017; inst :[$48,$8b,$1d,$00,$01,$00,$00]; Size:3), //* mov rbx, [0x100] */
+                                    (addr:$400017; inst :[$48,$8b,$1d,$00,$01,$00,$00]; Size:7), //* mov rbx, [0x100] */
                                     (addr:$0;      inst :[$48,$01,$d8];                  Size:3), //* add rax, rbx */
                                     (addr:$0;      inst :[];                             Size:0)
                                    );
@@ -145,7 +145,7 @@ const code : array[0..2] of op  = (
         (* Set the arch *)
         Triton.setArchitecture(ARCH_X86_64);
 
-        Triton.enableMode(ALIGNED_MEMORY, True);
+        Triton.SetMode(ALIGNED_MEMORY, True);
    end;
 
    procedure handle_mem_read(ctx : HandleApi; ma: HandleMemAcc);
@@ -162,7 +162,7 @@ const code : array[0..2] of op  = (
 
         // Create symbolic var
         comment := Format('mem_{:#0x%x}',[MemAccess(ma).address]);
-        symvar := Triton.convertMemoryToSymbolicVariable(MemAccess(ma),AnsiString(comment)) ;
+        symvar := Triton.symbolizeMemory(MemAccess(ma),AnsiString(comment)) ;
         mem_symvars := mem_symvars +  [ symvar ]
    end;
 
@@ -180,7 +180,7 @@ const code : array[0..2] of op  = (
 
         // Create symbolic var
         comment := Format('sym_reg_{%s}',[Registro(reg).name] );
-        symvar  := Triton.convertRegisterToSymbolicVariable(Registro(reg), AnsiString(comment));
+        symvar  := Triton.symbolizeRegister(Registro(reg), AnsiString(comment));
         reg_symvars := reg_symvars + [ symvar ];
    end;
 
@@ -214,7 +214,7 @@ begin
     emulate($400000);
     ast := Triton.getAstContext;
     rax := Triton.getSymbolicRegister( Triton.getRegister(ID_REG_X86_RAX) );
-    sUnRoll :=  (rax.Ast).unrollAst.ToStr;
+    sUnRoll :=  (rax.Ast).unroll.ToStr;
     assert(sUnRoll = '(bvadd SymVar_2 SymVar_3)') ;
 
     Triton.Free;
@@ -229,7 +229,7 @@ procedure TestIssue792_795;
         (* Set the arch *)
         Triton.setArchitecture(ARCH_X86_64);
 
-        Triton.enableMode(ALIGNED_MEMORY, True);
+        Triton.SetMode(ALIGNED_MEMORY, True);
    end;
 
 var
@@ -250,7 +250,7 @@ begin
 
     ast_original  := ast.bvadd(ast.variable(var1), ast.variable(var2)) ;
     ast_duplicate := ast_original.duplicate;
-    ast_unrolled  := ast_original.unrollAst;
+    ast_unrolled  := ast_original.unroll;
 
     Triton.setConcreteVariableValue(var1, 4);
     Triton.setConcreteVariableValue(var2, 2) ;

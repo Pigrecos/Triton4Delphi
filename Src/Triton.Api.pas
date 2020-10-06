@@ -50,8 +50,6 @@ type
   APathConstraint = array of PathConstraint;
 
   TApiHelper = record Helper for TApi
-    private
-
     public
         procedure   Create;
         procedure   Free;
@@ -59,7 +57,6 @@ type
         procedure setArchitecture(arch: architecture_e);
         function  getArchitecture:architecture_e;
         function  isArchitectureValid: Boolean;
-        procedure checkArchitecture;
         function  getCpuInstance: HandleCpuInterface;
         procedure clearArchitecture;
         function  getEndianness: endianness_e;
@@ -86,8 +83,8 @@ type
         procedure setConcreteMemoryAreaValue(baseAddr : uint64; values: array of Byte); overload;
         procedure setConcreteMemoryAreaValue(baseAddr: uint64; area : array of Byte;  size: usize); overload;
         procedure setConcreteRegisterValue(reg: Registro; value: uint64);
-        function  isMemoryMapped(baseAddr: uint64;  size : usize = 1): Boolean;
-        procedure unmapMemory(baseAddr: uint64;  size : usize = 1);
+        function  isConcreteMemoryValueDefined(baseAddr: uint64;  size : usize = 1): Boolean;
+        procedure clearConcreteMemoryValue(baseAddr: uint64;  size : usize = 1);
         procedure disassembly(var inst: Istruzione);
         (* Processing API ============ *)
         function   processing(var inst: Istruzione): Boolean;
@@ -95,7 +92,6 @@ type
         procedure  removeEngines;
         procedure  reset;
         (* IR API ============== *)
-        procedure  checkIrBuilder;
         function   buildSemantics(var inst: Istruzione): Boolean;
         function   getAstContext: AstContext;
         (* AST Representation API ========== *)
@@ -111,10 +107,9 @@ type
         procedure processCallbacks(kind: callback_e; reg: Registro);  overload;
         (* Modes API============ *)
         procedure checkModes ;
-        procedure enableMode(mode: mode_e; flag: Boolean);
+        procedure SetMode(mode: mode_e; flag: Boolean);
         function  isModeEnabled(mode: mode_e): Boolean;
         (* Symbolic engine API ========= *)
-        procedure checkSymbolic ;
         function  getSymbolicEngine: HandleSymbolicEngine;
         function  getSymbolicRegisters: TDictionary<register_e,symbolicExp>;
         function  getSymbolicRegister(reg: Registro):symbolicExp ;
@@ -124,9 +119,9 @@ type
         function  getSymbolicMemoryValue(mem: MemAccess): uint64; overload;
         function  getSymbolicMemoryAreaValue(baseAddr: uint64;size: usize): TArray<Byte>;
         function  getSymbolicRegisterValue(reg: Registro): uint64;
-        function  convertExpressionToSymbolicVariable(exprId: usize; symVarSize: uint32; symVarComment: AnsiString = ''): HandleSharedSymbolicVariable;
-        function  convertMemoryToSymbolicVariable(mem: MemAccess;  symVarComment: AnsiString = ''): SymbolicVar;
-        function  convertRegisterToSymbolicVariable(reg: Registro;  symVarComment : AnsiString = ''): SymbolicVar;
+        function  symbolizeExpression(exprId: usize; symVarSize: uint32; symVarComment: AnsiString = ''): HandleSharedSymbolicVariable;
+        function  symbolizeMemory(mem: MemAccess;  symVarComment: AnsiString = ''): SymbolicVar;
+        function  symbolizeRegister(reg: Registro;  symVarComment : AnsiString = ''): SymbolicVar;
         function  getOperandAst(op: OpWrapper): HandleAbstractNode; overload;
         function  getOperandAst(inst: Istruzione ; op: OpWrapper):HandleAbstractNode; overload;
         function  getImmediateAst(imm: Immediate): HandleAbstractNode;overload;
@@ -141,7 +136,6 @@ type
         function  createSymbolicExpression(inst: Istruzione ; node: HandleAbstractNode; dst: OpWrapper; comment : AnsiString = ''):symbolicExp;
         function  createSymbolicMemoryExpression(inst: Istruzione ; node: HandleAbstractNode; mem: MemAccess; comment: AnsiString = ''):symbolicExp;
         function  createSymbolicRegisterExpression(inst: Istruzione ; node: HandleAbstractNode; reg: Registro; comment: AnsiString = ''):symbolicExp;
-        function  createSymbolicFlagExpression(inst: Istruzione ; node: HandleAbstractNode; flag: Registro; comment: AnsiString = ''):symbolicExp;
         function  createSymbolicVolatileExpression(inst: Istruzione ; node: HandleAbstractNode; comment: AnsiString = ''):symbolicExp;
         procedure assignSymbolicExpressionToMemory(se:symbolicExp; mem: MemAccess);
         procedure assignSymbolicExpressionToRegister(se:symbolicExp; reg: Registro);
@@ -150,8 +144,9 @@ type
         function  getSymbolicVariableFromId(symVarId: usize):HandleSharedSymbolicVariable;
         function  getSymbolicVariableFromName(symVarName: AnsiString):HandleSharedSymbolicVariable;
         function  getPathConstraints:APathConstraint ;
-        function  getPathConstraintsAst:HandleAbstractNode;
-        procedure addPathConstraint(inst: Istruzione ; expr: symbolicExp);
+        function  getPathPredicate:HandleAbstractNode;
+        procedure pushPathConstraint(node: HandleAbstractNode);
+        procedure pushPathConstraintPco(pco: HandlePathConstraint);
         procedure clearPathConstraints;
         procedure enableSymbolicEngine(flag: Boolean);
         function  isSymbolicEngineEnabled: Boolean ;
@@ -172,7 +167,6 @@ type
         procedure setConcreteVariableValue(symVar: SymbolicVar; value: UInt64);
         procedure initLeaAst(mem: MemAccess; force: Boolean = false);
         (* Solver engine API =========== *)
-        procedure checkSolver ;
         function  getModel(node: HandleAbstractNode): TDictionary<UInt32,SolverModel> ;
         function  getModels(node: HandleAbstractNode;limit : uint32): TList< TDictionary<UInt32,SolverModel> >;
         function  isSat(node: HandleAbstractNode): Boolean ;
@@ -183,7 +177,6 @@ type
         function  processZ3Simplification(node: HandleAbstractNode): HandleAbstractNode ;
         (* Taint engine API==========*)
 
-        procedure  checkTaint;
         function  getTaintEngine:HandleTaintEngine;
         function  getTaintedMemory:TArray<UInt64> ;
         function  getTaintedRegisters:TArray<Registro> ;
@@ -204,16 +197,16 @@ type
         function  untaintRegister(reg: Registro): Boolean ;
         function  taintUnion(op1,op2: OpWrapper): Boolean ;
         function  taintAssignment(op1,op2: OpWrapper): Boolean ;
-        function  taintUnionMemoryImmediate(Dst: MemAccess): Boolean ;
+        function  taintUnionMemoryImmediate(Dst: MemAccess; imm : Immediate): Boolean ;
         function  taintUnionMemoryMemory(Dst: MemAccess; Src:MemAccess): Boolean ;
         function  taintUnionMemoryRegister(Dst: MemAccess; Src: Registro): Boolean ;
-        function  taintUnionRegisterImmediate(Dst: Registro): Boolean ;
+        function  taintUnionRegisterImmediate(Dst: Registro; imm : Immediate): Boolean ;
         function  taintUnionRegisterMemory(Dst: Registro; Src: MemAccess): Boolean ;
         function  taintUnionRegisterRegister(Dst:Registro; Src:Registro): Boolean ;
-        function  taintAssignmentMemoryImmediate(Dst:MemAccess): Boolean ;
+        function  taintAssignmentMemoryImmediate(Dst:MemAccess; imm : Immediate): Boolean ;
         function  taintAssignmentMemoryMemory(Dst: MemAccess; Src: MemAccess): Boolean ;
         function  taintAssignmentMemoryRegister(Dst: MemAccess; Src: Registro): Boolean ;
-        function  taintAssignmentRegisterImmediate(Dst: Registro): Boolean ;
+        function  taintAssignmentRegisterImmediate(Dst: Registro; imm : Immediate): Boolean ;
         function  taintAssignmentRegisterMemory(Dst: Registro; Src: MemAccess ): Boolean ;
         function  taintAssignmentRegisterRegister(Dst: Registro; Src: Registro): Boolean ;
 
@@ -281,9 +274,14 @@ begin
 
 end;
 
-procedure TApiHelper.addPathConstraint(inst: Istruzione; expr: symbolicExp);
+procedure TApiHelper.pushPathConstraint(node: HandleAbstractNode);
 begin
-    Triton.Core.addPathConstraint(FHApi, inst, expr)
+    Triton.Core.pushPathConstraint(FHApi, node)
+end;
+
+procedure TApiHelper.pushPathConstraintPco(pco: HandlePathConstraint);
+begin
+    Triton.Core.pushPathConstraint(FHApi, pco)
 end;
 
 procedure TApiHelper.assignSymbolicExpressionToMemory(se: symbolicExp; mem: MemAccess);
@@ -302,34 +300,9 @@ begin
     inst.Reload;
 end;
 
-procedure TApiHelper.checkArchitecture;
-begin
-    Triton.Core.checkArchitecture(FHApi)
-end;
-
-procedure TApiHelper.checkIrBuilder;
-begin
-    Triton.Core.checkIrBuilder(FHApi)
-end;
-
 procedure TApiHelper.checkModes;
 begin
     Triton.Core.checkModes(FHApi)
-end;
-
-procedure TApiHelper.checkSolver;
-begin
-    Triton.Core.checkSolver(FHApi)
-end;
-
-procedure TApiHelper.checkSymbolic;
-begin
-    Triton.Core.checkSymbolic(FHApi)
-end;
-
-procedure TApiHelper.checkTaint;
-begin
-    Triton.Core.checkTaint(FHApi)
 end;
 
 procedure TApiHelper.clearArchitecture;
@@ -367,29 +340,24 @@ begin
     Triton.Core.concretizeRegister(FHApi,reg)
 end;
 
-function TApiHelper.convertExpressionToSymbolicVariable(exprId: usize; symVarSize: uint32; symVarComment: AnsiString): HandleSharedSymbolicVariable;
+function TApiHelper.symbolizeExpression(exprId: usize; symVarSize: uint32; symVarComment: AnsiString): HandleSharedSymbolicVariable;
 begin
-    Result := Triton.Core.convertExpressionToSymbolicVariable(FHApi,exprId,symVarSize,PAnsiChar( symVarComment))
+    Result := Triton.Core.symbolizeExpression(FHApi,exprId,symVarSize,PAnsiChar( symVarComment))
 end;
 
-function TApiHelper.convertMemoryToSymbolicVariable(mem: MemAccess; symVarComment: AnsiString): SymbolicVar;
+function TApiHelper.symbolizeMemory(mem: MemAccess; symVarComment: AnsiString): SymbolicVar;
 begin
-    Result := SymbolicVar( Triton.Core.convertMemoryToSymbolicVariable(FHApi,mem, PAnsiChar( symVarComment)) )
+    Result := SymbolicVar( Triton.Core.symbolizeMemory(FHApi,mem, PAnsiChar( symVarComment)) )
 end;
 
-function TApiHelper.convertRegisterToSymbolicVariable(reg: Registro; symVarComment: AnsiString ): SymbolicVar;
+function TApiHelper.symbolizeRegister(reg: Registro; symVarComment: AnsiString ): SymbolicVar;
 begin
-    Result := SymbolicVar (Triton.Core.convertRegisterToSymbolicVariable(FHApi,reg, PAnsiChar(symVarComment)) )
+    Result := SymbolicVar (Triton.Core.symbolizeRegister(FHApi,reg, PAnsiChar(symVarComment)) )
 end;
 
 function TApiHelper.createSymbolicExpression(inst: Istruzione; node: HandleAbstractNode; dst: OpWrapper; comment: AnsiString): symbolicExp;
 begin
     Result := symbolicExp (Triton.Core.createSymbolicExpression(FHApi,inst,node,dst,PAnsiChar (comment)) )
-end;
-
-function TApiHelper.createSymbolicFlagExpression(inst: Istruzione; node: HandleAbstractNode; flag: Registro; comment: AnsiString): symbolicExp;
-begin
-    Result := symbolicExp (Triton.Core.createSymbolicFlagExpression(FHApi,inst,node,flag,PAnsiChar( comment)) )
 end;
 
 function TApiHelper.createSymbolicMemoryExpression(inst: Istruzione; node: HandleAbstractNode; mem: MemAccess; comment: AnsiString): symbolicExp;
@@ -413,9 +381,9 @@ begin
     inst.Reload;
 end;
 
-procedure TApiHelper.enableMode(mode: mode_e; flag: Boolean);
+procedure TApiHelper.SetMode(mode: mode_e; flag: Boolean);
 begin
-    Triton.Core.enableMode(FHApi, mode, flag)
+    Triton.Core.SetMode(FHApi, mode, flag)
 end;
 
 procedure TApiHelper.enableSymbolicEngine(flag: Boolean);
@@ -599,9 +567,9 @@ begin
 
 end;
 
-function TApiHelper.getPathConstraintsAst: HandleAbstractNode;
+function TApiHelper.getPathPredicate: HandleAbstractNode;
 begin
-    Result := Triton.Core.getPathConstraintsAst(FHApi)
+    Result := Triton.Core.getPathPredicate(FHApi)
 end;
 
 function TApiHelper.getRegister(id: register_e): Registro;
@@ -844,9 +812,9 @@ begin
     Result := Triton.Core.isFlagR(FHApi,reg)
 end;
 
-function TApiHelper.isMemoryMapped(baseAddr: uint64; size: usize): Boolean;
+function TApiHelper.isConcreteMemoryValueDefined(baseAddr: uint64; size: usize): Boolean;
 begin
-    Result := Triton.Core.isMemoryMapped(FHApi, baseAddr,size)
+    Result := Triton.Core.isConcreteMemoryValueDefined(FHApi, baseAddr,size)
 end;
 
 function TApiHelper.isMemorySymbolized(mem: MemAccess): Boolean;
@@ -1105,9 +1073,9 @@ begin
     Result := Triton.Core.taintAssignment(FHApi, op1,op2 )
 end;
 
-function TApiHelper.taintAssignmentMemoryImmediate(Dst: MemAccess): Boolean;
+function TApiHelper.taintAssignmentMemoryImmediate(Dst: MemAccess; imm : Immediate): Boolean;
 begin
-    Result := Triton.Core.taintAssignmentMemoryImmediate(FHApi, Dst)
+    Result := Triton.Core.taintAssignmentMemoryImmediate(FHApi, Dst,imm)
 end;
 
 function TApiHelper.taintAssignmentMemoryMemory(Dst, Src: MemAccess): Boolean;
@@ -1120,9 +1088,9 @@ begin
     Result := Triton.Core.taintAssignmentMemoryRegister(FHApi,Dst,Src)
 end;
 
-function TApiHelper.taintAssignmentRegisterImmediate(Dst: Registro): Boolean;
+function TApiHelper.taintAssignmentRegisterImmediate(Dst: Registro; imm : Immediate): Boolean;
 begin
-    Result := Triton.Core.taintAssignmentRegisterImmediate(FHApi, Dst)
+    Result := Triton.Core.taintAssignmentRegisterImmediate(FHApi, Dst,imm)
 end;
 
 function TApiHelper.taintAssignmentRegisterMemory(Dst: Registro; Src: MemAccess): Boolean;
@@ -1155,9 +1123,9 @@ begin
     Result := Triton.Core.taintUnion(FHApi, op1,op2)
 end;
 
-function TApiHelper.taintUnionMemoryImmediate(Dst: MemAccess): Boolean;
+function TApiHelper.taintUnionMemoryImmediate(Dst: MemAccess; imm : Immediate): Boolean;
 begin
-    Result := Triton.Core.taintUnionMemoryImmediate(FHApi, Dst)
+    Result := Triton.Core.taintUnionMemoryImmediate(FHApi, Dst,imm)
 end;
 
 function TApiHelper.taintUnionMemoryMemory(Dst, Src: MemAccess): Boolean;
@@ -1170,9 +1138,9 @@ begin
     Result := Triton.Core.taintUnionMemoryRegister(FHApi,Dst,Src)
 end;
 
-function TApiHelper.taintUnionRegisterImmediate(Dst: Registro): Boolean;
+function TApiHelper.taintUnionRegisterImmediate(Dst: Registro; imm : Immediate): Boolean;
 begin
-   Result := Triton.Core.taintUnionRegisterImmediate(FHApi, Dst)
+   Result := Triton.Core.taintUnionRegisterImmediate(FHApi, Dst,imm)
 end;
 
 function TApiHelper.taintUnionRegisterMemory(Dst: Registro; Src: MemAccess): Boolean;
@@ -1185,9 +1153,9 @@ begin
    Result := Triton.Core.taintUnionRegisterRegister(FHApi,Dst,Src)
 end;
 
-procedure TApiHelper.unmapMemory(baseAddr: uint64; size: usize);
+procedure TApiHelper.clearConcreteMemoryValue(baseAddr: uint64; size: usize);
 begin
-   Triton.Core.unmapMemory(FHApi, baseAddr,size)
+   Triton.Core.clearConcreteMemoryValue(FHApi, baseAddr,size)
 end;
 
 function TApiHelper.untaintMemory(addr: uint64): Boolean;

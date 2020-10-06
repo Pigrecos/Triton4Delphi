@@ -106,10 +106,10 @@ var
 
 procedure symbolization_init;
 begin
-    Triton.convertRegisterToSymbolicVariable( Triton.getRegister(ID_REG_X86_EAX) );
-    Triton.convertRegisterToSymbolicVariable( Triton.getRegister(ID_REG_X86_EBX) );
-    Triton.convertRegisterToSymbolicVariable( Triton.getRegister(ID_REG_X86_ECX) );
-    Triton.convertRegisterToSymbolicVariable( Triton.getRegister(ID_REG_X86_EDX) );
+    Triton.symbolizeRegister( Triton.getRegister(ID_REG_X86_EAX) );
+    Triton.symbolizeRegister( Triton.getRegister(ID_REG_X86_EBX) );
+    Triton.symbolizeRegister( Triton.getRegister(ID_REG_X86_ECX) );
+    Triton.symbolizeRegister( Triton.getRegister(ID_REG_X86_EDX) );
 end;
 
 procedure test_trace(trace: array of op);
@@ -137,7 +137,7 @@ begin
         if instruction.branch then
         begin
             // Opaque Predicate AST
-            op_ast := Triton.getPathConstraintsAst;
+            op_ast := Triton.getPathPredicate;
             // Try another model
             model := Triton.getModel(astCtxt.lnot(op_ast));
             if Assigned(model) and  (model.Count > 0) then

@@ -198,8 +198,6 @@ extern "C"
 	
 	bool  EXPORTCALL isArchitectureValid(HandleApi Handle);
 	
-	void  EXPORTCALL checkArchitecture(HandleApi Handle);
-	
 	void  EXPORTCALL clearArchitecture(HandleApi Handle);
 	
 	triton::arch::endianness_e  EXPORTCALL getEndianness(HandleApi Handle);
@@ -256,10 +254,10 @@ extern "C"
 	void  EXPORTCALL setConcreteRegisterValue(HandleApi Handle, HandleReg reg, triton::uint64 value);
 	
 	//! [**architecture api**] - Returns true if the range `[baseAddr:size]` is mapped into the internal memory representation. \sa getConcreteMemoryValue() and getConcreteMemoryAreaValue().
-	bool  EXPORTCALL isMemoryMapped(HandleApi Handle, triton::uint64 baseAddr, triton::usize size = 1);
+	bool  EXPORTCALL isConcreteMemoryValueDefined(HandleApi Handle, triton::uint64 baseAddr, triton::usize size = 1);
 	
 	//! [**architecture api**] - Removes the range `[baseAddr:size]` from the internal memory representation. \sa isMemoryMapped().
-	void   EXPORTCALL unmapMemory(HandleApi Handle, triton::uint64 baseAddr, triton::usize size = 1);
+	void   EXPORTCALL clearConcreteMemoryValue(HandleApi Handle, triton::uint64 baseAddr, triton::usize size = 1);
 	
 	void  EXPORTCALL disassembly(HandleApi Handle, HandleInstruz inst);
 	
@@ -287,10 +285,7 @@ extern "C"
 	
 	
 	/* IR API ======================================================================================== */
-
-	//! [**IR builder api**] - Raises an exception if the IR builder is not initialized.
-	void  EXPORTCALL checkIrBuilder(HandleApi Handle);
-	
+  	
 	//! [**IR builder api**] - Builds the instruction semantics. Returns true if the instruction is supported. You must define an architecture before. \sa processing().
 	bool   EXPORTCALL buildSemantics(HandleApi Handle, HandleInstruz inst);
 	
@@ -356,17 +351,14 @@ extern "C"
 	void EXPORTCALL checkModes(HandleApi Handle) ;
 
 	//! [**modes api**] - Enables or disables a specific mode.
-	void EXPORTCALL enableMode(HandleApi Handle, triton::modes::mode_e mode, bool flag);
+	void EXPORTCALL setMode(HandleApi Handle, triton::modes::mode_e mode, bool flag);
 
 	//! [**modes api**] - Returns true if the mode is enabled.
 	bool EXPORTCALL isModeEnabled(HandleApi Handle, triton::modes::mode_e mode) ;
 
 
 	/* Symbolic engine API =========================================================================== */
-
-	//! [**symbolic api**] - Raises an exception if the symbolic engine is not initialized.
-	void EXPORTCALL checkSymbolic(HandleApi Handle) ;
-
+  
 	//! [**symbolic api**] - Returns the instance of the symbolic engine.
 	HandleSymbolicEngine EXPORTCALL getSymbolicEngine(HandleApi Handle);
 
@@ -395,13 +387,13 @@ extern "C"
 	uint64 EXPORTCALL getSymbolicRegisterValue(HandleApi Handle, HandleReg reg);
 
 	//! [**symbolic api**] - Converts a symbolic expression to a symbolic variable. `symVarSize` must be in bits.
-	HandleSharedSymbolicVariable EXPORTCALL convertExpressionToSymbolicVariable(HandleApi Handle, triton::usize exprId, triton::uint32 symVarSize, char* symVarComment = NULL);
+	HandleSharedSymbolicVariable EXPORTCALL symbolizeExpression(HandleApi Handle, triton::usize exprId, triton::uint32 symVarSize, char* symVarComment = NULL);
 
 	//! [**symbolic api**] - Converts a symbolic memory expression to a symbolic variable.
-	HandleSharedSymbolicVariable EXPORTCALL convertMemoryToSymbolicVariable(HandleApi Handle, HandleMemAcc mem, char* symVarComment = NULL);
+	HandleSharedSymbolicVariable EXPORTCALL symbolizeMemory(HandleApi Handle, HandleMemAcc mem, char* symVarComment = NULL);
 
 	//! [**symbolic api**] - Converts a symbolic register expression to a symbolic variable.
-	HandleSharedSymbolicVariable EXPORTCALL convertRegisterToSymbolicVariable(HandleApi Handle, HandleReg reg, char* symVarComment = NULL);
+	HandleSharedSymbolicVariable EXPORTCALL symbolizeRegister(HandleApi Handle, HandleReg reg, char* symVarComment = NULL);
 
 	//! [**symbolic api**] - Returns the AST corresponding to the operand.
 	HandleAbstractNode EXPORTCALL getOperandAst(HandleApi Handle, HandleOperandWrapper op);
@@ -434,7 +426,7 @@ extern "C"
 	HandleSharedSymbolicVariable EXPORTCALL newSymbolicVariable(HandleApi Handle, triton::uint32 varSize, char* comment = NULL);
 
 	//! [**symbolic api**] - Removes the symbolic expression corresponding to the id.
-	void EXPORTCALL removeSymbolicExpression(HandleApi Handle, triton::usize symExprId);
+	void EXPORTCALL removeSymbolicExpression(HandleApi Handle, HandleSharedSymbolicExpression symExpr);
 
 	//! [**symbolic api**] - Returns the new shared symbolic abstract expression and links this expression to the instruction.
 	HandleSharedSymbolicExpression EXPORTCALL createSymbolicExpression(HandleApi Handle, HandleInstruz inst, HandleAbstractNode node, HandleOperandWrapper dst, char* comment = NULL);
@@ -444,9 +436,6 @@ extern "C"
 
 	//! [**symbolic api**] - Returns the new shared symbolic register expression and links this expression to the instruction.
 	HandleSharedSymbolicExpression EXPORTCALL createSymbolicRegisterExpression(HandleApi Handle, HandleInstruz inst, HandleAbstractNode node, HandleReg reg, char* comment = NULL);
-
-	//! [**symbolic api**] - Returns the new shared symbolic flag expression and links this expression to the instruction.
-	HandleSharedSymbolicExpression EXPORTCALL createSymbolicFlagExpression(HandleApi Handle, HandleInstruz inst, HandleAbstractNode node, HandleReg flag, char* comment = NULL);
 
 	//! [**symbolic api**] - Returns the new shared symbolic volatile expression and links this expression to the instruction.
 	HandleSharedSymbolicExpression EXPORTCALL createSymbolicVolatileExpression(HandleApi Handle, HandleInstruz inst, HandleAbstractNode node, char* comment = NULL);
@@ -473,10 +462,13 @@ extern "C"
 	uint32 EXPORTCALL getPathConstraints(HandleApi Handle, HandlePathConstraint *& outPath);
 
 	//! [**symbolic api**] - Returns the logical conjunction AST of path constraints.
-	HandleAbstractNode EXPORTCALL getPathConstraintsAst(HandleApi Handle);
+	HandleAbstractNode EXPORTCALL getPathPredicate(HandleApi Handle);
 
 	//! [**symbolic api**] - Adds a path constraint.
-	void EXPORTCALL addPathConstraint(HandleApi Handle, HandleInstruz inst, HandleSharedSymbolicExpression expr);
+	void EXPORTCALL pushPathConstraint(HandleApi Handle, HandleAbstractNode node);
+
+  //! [**symbolic api**] - Adds a path constraint.
+  void EXPORTCALL pushPathConstraintPco(HandleApi Handle, HandlePathConstraint pco);
 
 	//! [**symbolic api**] - Clears the logical conjunction vector of path constraints.
 	void EXPORTCALL clearPathConstraints(HandleApi Handle);
@@ -536,10 +528,7 @@ extern "C"
 	void EXPORTCALL initLeaAst(HandleApi Handle, HandleMemAcc mem, bool force = false);
 
 	/* Solver engine API ============================================================================= */
-
-	//! [**solver api**] - Raises an exception if the solver engine is not initialized.
-	void EXPORTCALL checkSolver(HandleApi Handle) ;
-
+  	
 	/*!
 	* \brief [**solver api**] - Computes and returns a model from a symbolic constraint.
 	*
@@ -585,11 +574,7 @@ extern "C"
 	/* Taint engine API
 	* ==============================================================================
 	*/
-
-	//! [**taint api**] - Raises an exception if the taint engine is not
-	//! initialized.
-	void EXPORTCALL checkTaint(HandleApi Handle);
-
+  
 	//! [**taint api**] - Returns the instance of the taint engine.
 	HandleTaintEngine EXPORTCALL getTaintEngine(HandleApi Handle);
 
@@ -658,9 +643,8 @@ extern "C"
 	//! [**taint api**] - Abstract assignment tainting.
 	bool EXPORTCALL taintAssignment(HandleApi Handle, HandleOperandWrapper op1, HandleOperandWrapper op2);
 
-	//! [**taint api**] - Taints MemoryImmediate with union. Returns true if the
-	//! memDst is TAINTED.
-	bool EXPORTCALL taintUnionMemoryImmediate(HandleApi Handle, HandleMemAcc memDst);
+  //! [**taint api**] - Taints MemoryImmediate with union. Returns true if the memDst is TAINTED.
+	bool EXPORTCALL taintUnionMemoryImmediate(HandleApi Handle, HandleMemAcc memDst, HandleImmediate imm);
 
 	//! [**taint api**] - Taints MemoryMemory with union. Returns true if the
 	//! memDst or memSrc are TAINTED.
@@ -672,7 +656,7 @@ extern "C"
 
 	//! [**taint api**] - Taints RegisterImmediate with union. Returns true if the
 	//! regDst is TAINTED.
-	bool EXPORTCALL taintUnionRegisterImmediate(HandleApi Handle, HandleReg regDst);
+	bool EXPORTCALL taintUnionRegisterImmediate(HandleApi Handle, HandleReg regDst, HandleImmediate imm);
 
 	//! [**taint api**] - Taints RegisterMemory with union. Returns true if the
 	//! regDst or memSrc are TAINTED.
@@ -684,7 +668,7 @@ extern "C"
 
 	//! [**taint api**] - Taints MemoryImmediate with assignment. Returns always
 	//! false.
-	bool EXPORTCALL taintAssignmentMemoryImmediate(HandleApi Handle, HandleMemAcc memDst);
+	bool EXPORTCALL taintAssignmentMemoryImmediate(HandleApi Handle, HandleMemAcc memDst, HandleImmediate imm);
 
 	//! [**taint api**] - Taints MemoryMemory with assignment. Returns true if the
 	//! memDst is tainted.
@@ -696,7 +680,7 @@ extern "C"
 
 	//! [**taint api**] - Taints RegisterImmediate with assignment. Returns always
 	//! false.
-	bool EXPORTCALL taintAssignmentRegisterImmediate(HandleApi Handle, HandleReg regDst);
+	bool EXPORTCALL taintAssignmentRegisterImmediate(HandleApi Handle, HandleReg regDst, HandleImmediate imm);
 
 	//! [**taint api**] - Taints RegisterMemory with assignment. Returns true if
 	//! the regDst is tainted.
@@ -892,7 +876,7 @@ extern "C"
 	void EXPORTCALL IsetBranch(HandleInstruz hIstr, bool flag);
 
 	//! Sets the code condition of the instruction (mainly for AArch64).
-	void EXPORTCALL IsetCodeCondition(HandleInstruz hIstr, triton::arch::aarch64::condition_e codeCondition);
+	void EXPORTCALL IsetCodeCondition(HandleInstruz hIstr, triton::arch::arm::condition_e codeCondition);
 
 	//! Sets flag to define if the condition is taken or not.
 	void EXPORTCALL IsetConditionTaken(HandleInstruz hIstr, bool flag);
@@ -1011,6 +995,9 @@ extern "C"
 
 	//! Sets the origin register.
 	void EXPORTCALL SEsetOriginRegister(HandleSharedSymbolicExpression Handle,HandleReg reg);
+
+	//! Get is taint expression.
+	bool EXPORTCALL SEisTainted(HandleSharedSymbolicExpression Handle);
 
 	/*  Symbolic Variable =================================================================== */
 
@@ -1337,7 +1324,7 @@ extern "C"
 	void EXPORTCALL Node_init(HandleAbstractNode Handle) ;
 
 	//! AST C++ API - Unrolls the SSA form of a given AST.
-	HandleAbstractNode EXPORTCALL  Node_unrollAst(HandleAbstractNode node);
+	HandleAbstractNode EXPORTCALL  Node_unroll(HandleAbstractNode node);
 
 	//! Gets a duplicate.
 	HandleAbstractNode EXPORTCALL  Node_duplicate(HandleAbstractNode node);
@@ -1346,10 +1333,10 @@ extern "C"
 	void EXPORTCALL AstToStr(HandleAbstractNode node, char * &sOut);
 
 	//! Returns a deque of collected matched nodes via a depth-first pre order traversal.
-	uint32 EXPORTCALL Node_lookingForNodes(HandleAbstractNode node, HandleAbstractNode * &outArray,triton::ast::ast_e match = ANY_NODE);
+	uint32 EXPORTCALL Node_search(HandleAbstractNode node, HandleAbstractNode * &outArray,triton::ast::ast_e match = ANY_NODE);
 
 	//! Returns the has of the tree. The hash is computed recursively on the whole tree.
-	triton::uint64 EXPORTCALL Node_hash(HandleAbstractNode node, triton::uint32 deep) ;
+	triton::uint64 EXPORTCALL Node_hash(HandleAbstractNode node) ;
 
 	//! descendig node particular procedure //todo support uint512 
 	triton::uint64 EXPORTCALL  NodeInteger_getInteger(HandleAbstractNode node);

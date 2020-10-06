@@ -54,8 +54,8 @@ begin
 
     Triton.setArchitecture(ARCH_X86) ;
 
-    Triton.convertRegisterToSymbolicVariable( Triton.getRegister(ID_REG_X86_EAX));
-    Triton.convertRegisterToSymbolicVariable( Triton.getRegister(ID_REG_X86_EBX)) ;
+    Triton.symbolizeRegister( Triton.getRegister(ID_REG_X86_EAX));
+    Triton.symbolizeRegister( Triton.getRegister(ID_REG_X86_EBX)) ;
 
     for i := 0 to Length(trace) -1 do
     begin
@@ -76,7 +76,7 @@ var
 begin
         //Test getPathConstraintsAst//
         astCtx := Triton.getAstContext;
-        crst := Triton.getPathConstraintsAst;
+        crst := Triton.getPathPredicate;
         assert(Triton.getModel(crst).Count <> 0);
         assert( Triton.getModel( astCtx.lnot(crst)).Count <> 0) ;
 end;
@@ -111,7 +111,7 @@ var
   Pc      : PathConstraint;
 begin
         pc := Triton.getPathConstraints[0];
-        assert(pc.TakenAddress = 91);
+        assert(pc.TakenAddress = 108);
 end;
 
 procedure test_getBranchConstraints;
@@ -125,7 +125,7 @@ begin
 
         assert(pc[0].srcAddr =  pc[1].srcAddr) ;
 
-        assert(pc[0].dstAddr = 91);
+        assert(pc[0].dstAddr = 108);
         assert(pc[1].dstAddr = 23);
 end;
 

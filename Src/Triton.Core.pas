@@ -22,9 +22,6 @@ interface
         //! [**Architecture api**] - Returns true if the architecture is valid.
         function isArchitectureValid(vApi: HandleApi): Boolean; cdecl;  external Triton_dll Name 'isArchitectureValid';
 
-        //! [**architecture api**] - Raises an exception if the architecture is not initialized.
-        procedure checkArchitecture(vApi: HandleApi); external Triton_dll Name 'checkArchitecture';
-
         //! [**architecture api**] - Returns the instance of the current CPU used.
         function getCpuInstance(vApi: HandleApi): HandleCpuInterface; cdecl;  external Triton_dll Name 'getCpuInstance';
 
@@ -103,10 +100,10 @@ interface
         procedure  setConcreteRegisterValue(Handle: HandleApi; reg: HandleReg; value: uint64);cdecl;  external Triton_dll Name 'setConcreteRegisterValue';
 
         //! [**architecture api**] - Returns true if the range `[baseAddr:size]` is mapped into the internal memory representation. \sa getConcreteMemoryValue() and getConcreteMemoryAreaValue().
-        function isMemoryMapped(Handle: HandleApi ;baseAddr: uint64;  size : usize = 1): Boolean; cdecl; external Triton_dll Name 'isMemoryMapped';
+        function isConcreteMemoryValueDefined(Handle: HandleApi ;baseAddr: uint64;  size : usize = 1): Boolean; cdecl; external Triton_dll Name 'isMemoryMapped';
 
         //! [**architecture api**] - Removes the range `[baseAddr:size]` from the internal memory representation. \sa isMemoryMapped().
-        procedure unmapMemory(Handle: HandleApi; baseAddr: uint64;  size : usize = 1);cdecl;  external Triton_dll Name 'unmapMemory';
+        procedure clearConcreteMemoryValue(Handle: HandleApi; baseAddr: uint64;  size : usize = 1);cdecl;  external Triton_dll Name 'unmapMemory';
 
         //! [**architecture api**] - Disassembles the instruction and setup operands. You must define an architecture before. \sa processing().
         procedure disassembly(vApi: HandleApi;inst: HandleInstruz);cdecl;  external Triton_dll Name 'disassembly';
@@ -127,9 +124,6 @@ interface
 
 
     (* IR API ======================================================================================== *)
-
-        //! [**IR builder api**] - Raises an exception if the IR builder is not initialized.
-        procedure   checkIrBuilder(Handle: HandleApi);cdecl;  external Triton_dll Name 'checkIrBuilder';
 
         //! [**IR builder api**] - Builds the instruction semantics. Returns true if the instruction is supported. You must define an architecture before. \sa processing().
         function   buildSemantics(Handle : HandleApi ; inst: HandleInstruz): Boolean;cdecl;  external Triton_dll Name 'buildSemantics';
@@ -195,15 +189,12 @@ interface
         procedure checkModes(Handle:HandleApi) ; cdecl;  external Triton_dll Name 'checkModes';
 
         //! [**modes api**] - Enables or disables a specific mode.
-        procedure enableMode(Handle: HandleApi; mode: mode_e; flag: Boolean); cdecl;  external Triton_dll Name 'enableMode';
+        procedure SetMode(Handle: HandleApi; mode: mode_e; flag: Boolean); cdecl;  external Triton_dll Name 'setMode';
 
         //! [**modes api**] - Returns true if the mode is enabled.
         function isModeEnabled(Handle: HandleApi; mode: mode_e): Boolean; cdecl;  external Triton_dll Name 'isModeEnabled';
 
     (* Symbolic engine API =========================================================================== *)
-
-        //! [**symbolic api**] - Raises an exception if the symbolic engine is not initialized.
-        procedure  checkSymbolic(Handle: HandleApi ) ; cdecl;  external Triton_dll Name 'checkSymbolic';
 
         //! [**symbolic api**] - Returns the instance of the symbolic engine.
         function getSymbolicEngine(Handle: HandleApi): HandleSymbolicEngine; cdecl;  external Triton_dll Name 'getSymbolicEngine';
@@ -233,13 +224,13 @@ interface
         function getSymbolicRegisterValue(Handle: HandleApi; reg: HandleReg): uint64; cdecl;  external Triton_dll Name 'getSymbolicRegisterValue';
 
         //! [**symbolic api**] - Converts a symbolic expression to a symbolic variable. `symVarSize` must be in bits.
-        function convertExpressionToSymbolicVariable(Handle: HandleApi; exprId: usize; symVarSize: uint32; symVarComment: PAnsiChar = nil): HandleSharedSymbolicVariable; cdecl;  external Triton_dll Name 'convertExpressionToSymbolicVariable';
+        function symbolizeExpression(Handle: HandleApi; exprId: usize; symVarSize: uint32; symVarComment: PAnsiChar = nil): HandleSharedSymbolicVariable; cdecl;  external Triton_dll Name 'symbolizeExpression';
 
         //! [**symbolic api**] - Converts a symbolic memory expression to a symbolic variable.
-        function convertMemoryToSymbolicVariable(Handle: HandleApi; mem: HandleMemAcc;  symVarComment: PAnsiChar = nil): HandleSharedSymbolicVariable; cdecl;  external Triton_dll Name 'convertMemoryToSymbolicVariable';
+        function symbolizeMemory(Handle: HandleApi; mem: HandleMemAcc;  symVarComment: PAnsiChar = nil): HandleSharedSymbolicVariable; cdecl;  external Triton_dll Name 'symbolizeMemory';
 
         //! [**symbolic api**] - Converts a symbolic register expression to a symbolic variable.
-        function convertRegisterToSymbolicVariable(Handle: HandleApi; reg: HandleReg;  symVarComment : PAnsiChar = nil): HandleSharedSymbolicVariable; cdecl;  external Triton_dll Name 'convertRegisterToSymbolicVariable';
+        function symbolizeRegister(Handle: HandleApi; reg: HandleReg;  symVarComment : PAnsiChar = nil): HandleSharedSymbolicVariable; cdecl;  external Triton_dll Name 'symbolizeRegister';
 
         //! [**symbolic api**] - Returns the AST corresponding to the operand.
         function getOperandAst(Handle: HandleApi; op: HandleOperandWrapper): HandleAbstractNode; cdecl;  external Triton_dll Name 'getOperandAst';
@@ -283,9 +274,6 @@ interface
         //! [**symbolic api**] - Returns the new shared symbolic register expression and links this expression to the instruction.
         function createSymbolicRegisterExpression(Handle: HandleApi; inst: HandleInstruz ; node: HandleAbstractNode; reg: HandleReg; comment: PAnsiChar = nil):HandleSharedSymbolicExpression; cdecl;  external Triton_dll Name 'createSymbolicRegisterExpression';
 
-        //! [**symbolic api**] - Returns the new shared symbolic flag expression and links this expression to the instruction.
-        function createSymbolicFlagExpression(Handle: HandleApi; inst: HandleInstruz ; node: HandleAbstractNode; flag: HandleReg; comment: PAnsiChar = nil):HandleSharedSymbolicExpression;  cdecl;  external Triton_dll Name 'createSymbolicFlagExpression';
-
         //! [**symbolic api**] - Returns the new shared symbolic volatile expression and links this expression to the instruction.
         function createSymbolicVolatileExpression(Handle: HandleApi; inst: HandleInstruz ; node: HandleAbstractNode; comment: PAnsiChar = nil):HandleSharedSymbolicExpression;  cdecl;  external Triton_dll Name 'createSymbolicVolatileExpression';
 
@@ -311,10 +299,13 @@ interface
         function  getPathConstraints(Handle: HandleApi; outPath: PHandlePathConstraint):uint32 ;  cdecl;  external Triton_dll Name 'getPathConstraints';
 
         //! [**symbolic api**] - Returns the logical conjunction AST of path constraints.
-        function getPathConstraintsAst(Handle:HandleApi):HandleAbstractNode;   cdecl;  external Triton_dll Name 'getPathConstraintsAst';
+        function getPathPredicate(Handle:HandleApi):HandleAbstractNode;   cdecl;  external Triton_dll Name 'getPathPredicate';
 
         //! [**symbolic api**] - Adds a path constraint.
-        procedure  addPathConstraint(Handle: HandleApi; inst: HandleInstruz ; expr: HandleSharedSymbolicExpression); cdecl;  external Triton_dll Name 'addPathConstraint';
+        procedure  pushPathConstraint(Handle: HandleApi; node: HandleAbstractNode); cdecl;  external Triton_dll Name 'pushPathConstraint';
+
+        //! [**symbolic api**] - Adds a path constraint.
+        procedure  pushPathConstraintPco(Handle: HandleApi; pco: HandlePathConstraint); cdecl;  external Triton_dll Name 'pushPathConstraintPco';
 
         //! [**symbolic api**] - Clears the logical conjunction vector of path constraints.
         procedure  clearPathConstraints(Handle: HandleApi);  cdecl;  external Triton_dll Name 'clearPathConstraints';
@@ -377,9 +368,6 @@ interface
 
     	(* Solver engine API ============================================================================= *)
 
-        //! [**solver api**] - Raises an exception if the solver engine is not initialized.
-        procedure checkSolver(Handle: HandleApi) ; cdecl;  external Triton_dll Name 'checkSolver';
-
         (*!
         * \brief [**solver api**] - Computes and returns a model from a symbolic constraint.
         *
@@ -425,10 +413,6 @@ interface
     (* Taint engine API
 	   * ==============================================================================
 	   *)
-
-        //! [**taint api**] - Raises an exception if the taint engine is not
-        //! initialized.
-        procedure  checkTaint(Handle: HandleApi ); cdecl;  external Triton_dll Name 'checkTaint';
 
         //! [**taint api**] - Returns the instance of the taint engine.
         function getTaintEngine(Handle: HandleApi ):HandleTaintEngine;cdecl;  external Triton_dll Name 'getTaintEngine';
@@ -500,7 +484,7 @@ interface
 
         //! [**taint api**] - Taints MemoryImmediate with union. Returns true if the
         //! memDst is TAINTED.
-        function taintUnionMemoryImmediate(Handle: HandleApi ; Dst: HandleMemAcc): Boolean ;cdecl;  external Triton_dll Name 'taintUnionMemoryImmediate';
+        function taintUnionMemoryImmediate(Handle: HandleApi ; Dst: HandleMemAcc; imm: HandleImmediate): Boolean ;cdecl;  external Triton_dll Name 'taintUnionMemoryImmediate';
 
         //! [**taint api**] - Taints MemoryMemory with union. Returns true if the
         //! memDst or memSrc are TAINTED.
@@ -512,7 +496,7 @@ interface
 
         //! [**taint api**] - Taints RegisterImmediate with union. Returns true if the
         //! regDst is TAINTED.
-        function taintUnionRegisterImmediate(Handle: HandleApi ; Dst: HandleReg): Boolean ;cdecl;  external Triton_dll Name 'taintUnionRegisterImmediate';
+        function taintUnionRegisterImmediate(Handle: HandleApi ; Dst: HandleReg; imm: HandleImmediate): Boolean ;cdecl;  external Triton_dll Name 'taintUnionRegisterImmediate';
 
         //! [**taint api**] - Taints RegisterMemory with union. Returns true if the
         //! regDst or memSrc are TAINTED.
@@ -524,7 +508,7 @@ interface
 
         //! [**taint api**] - Taints MemoryImmediate with assignment. Returns always
         //! false.
-        function taintAssignmentMemoryImmediate(Handle: HandleApi ; Dst:HandleMemAcc): Boolean ; cdecl;  external Triton_dll Name 'taintAssignmentMemoryImmediate';
+        function taintAssignmentMemoryImmediate(Handle: HandleApi ; Dst:HandleMemAcc; imm: HandleImmediate): Boolean ; cdecl;  external Triton_dll Name 'taintAssignmentMemoryImmediate';
 
         //! [**taint api**] - Taints MemoryMemory with assignment. Returns true if the
         //! memDst is tainted.
@@ -536,7 +520,7 @@ interface
 
         //! [**taint api**] - Taints RegisterImmediate with assignment. Returns always
         //! false.
-        function taintAssignmentRegisterImmediate(Handle: HandleApi ; Dst: HandleReg): Boolean ;cdecl;  external Triton_dll Name 'taintAssignmentRegisterImmediate';
+        function taintAssignmentRegisterImmediate(Handle: HandleApi ; Dst: HandleReg; imm: HandleImmediate): Boolean ;cdecl;  external Triton_dll Name 'taintAssignmentRegisterImmediate';
 
         //! [**taint api**] - Taints RegisterMemory with assignment. Returns true if
         //! the regDst is tainted.

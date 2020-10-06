@@ -11,6 +11,7 @@ interface
 
 type
 
+  PsymbolicExp = ^symbolicExp ;
   symbolicExp = record
     private
       FHS            : HandleSharedSymbolicExpression;
@@ -46,10 +47,11 @@ type
       procedure setType(const Value: expression_e);
       function getId: usize;
       function Update: Boolean;
+    function GetIsTanted: Boolean;
     public
-      isTainnted : Boolean;
       procedure Create(node: AbstractNode; id: usize; tipo: expression_e; comment: PAnsiChar = nil); overload;
       procedure Create(other: symbolicExp);overload;
+      function IsValid: Boolean;
       procedure Free;
       function ToStr:string;
 
@@ -71,6 +73,7 @@ type
     property IsMemory    : Boolean            read FIsMemory ;
     property IsRegiter   : Boolean            read FIsRegiter ;
     property IsSymbolized: Boolean            read FisSymbolized ;
+    property isTainted   : Boolean            read GetIsTanted;
   end;
 
   (*  SymbolicExpression ============================================================================== *)
@@ -117,7 +120,8 @@ type
         procedure SEsetOriginMemory(Handle:HandleSharedSymbolicExpression;mem: HandleMemAcc); cdecl;  external Triton_dll Name 'SEsetOriginMemory';
         //! Sets the origin register.
         procedure SEsetOriginRegister(Handle:HandleSharedSymbolicExpression;reg: HandleReg);  cdecl;  external Triton_dll Name 'SEsetOriginRegister';
-
+        //! Get is taint expression.
+      	function SEisTainted(Handle:HandleSharedSymbolicExpression): Boolean; cdecl;  external Triton_dll Name 'SEisTainted';
 
 
 implementation
@@ -144,6 +148,11 @@ procedure symbolicExp.Free;
 begin
     SEDelete(FHS);
     ZeroMemory(@self,SizeOf(symbolicExp));
+end;
+
+function symbolicExp.IsValid:Boolean;
+begin
+    Result := Assigned(FHS)
 end;
 
 function symbolicExp.Update:Boolean;
@@ -325,6 +334,11 @@ begin
     Result := SEisSymbolized(FHS) ;
 
     FisSymbolized := Result;
+end;
+
+function symbolicExp.GetIsTanted: Boolean;
+begin
+    Result := SEisTainted(FHS);
 end;
 
 function symbolicExp.getNewAst: AbstractNode;

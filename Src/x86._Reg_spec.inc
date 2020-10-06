@@ -192,6 +192,14 @@ ID_REG_X86_CR13,   // cr13
 ID_REG_X86_CR14,   // cr14
 ID_REG_X86_CR15,   // cr15
 
+(* Debug *)
+ID_REG_X86_DR0,    // dr0
+ID_REG_X86_DR1,    // dr1
+ID_REG_X86_DR2,    // dr2
+ID_REG_X86_DR3,    // dr3
+ID_REG_X86_DR6,    // dr6
+ID_REG_X86_DR7,    // dr7
+				
 (* Flags ID used in the Taint and Symbolic Engines *)
 ID_REG_X86_AC,   // ac
 ID_REG_X86_AF,   // af

@@ -249,8 +249,8 @@ begin
         m2^.Create(n.Key+1, BYTE_SIZE);
 
         Triton.setConcreteMemoryValue(n.Key,n.Value);
-        Triton.convertMemoryToSymbolicVariable( m1^, 'm1' );
-        Triton.convertMemoryToSymbolicVariable( m2^ ,'m2');
+        Triton.symbolizeMemory( m1^, 'm1' );
+        Triton.symbolizeMemory( m2^ ,'m2');
 
     end;
 end;
@@ -331,7 +331,7 @@ begin
     // Set the architecture
     Triton.setArchitecture(ARCH_X86_64);
     // Symbolic optimization
-    Triton.enableMode(ALIGNED_MEMORY, True) ;
+    Triton.SetMode(ALIGNED_MEMORY, True) ;
 
     // Define entry point
     uEntry := $40056d;

@@ -100,7 +100,7 @@ type
     typedef boost::multiprecision::int512_t sint512; *)
 
     //! unsigned MAX_INT 32 or 64 bits according to the CPU.
-    usize = Cardinal;
+    usize = NativeUInt;
 
     {$IFDEF  CPUX64}
     //! unsigned long long if the arch is 64-bits.
@@ -118,6 +118,7 @@ type
     architecture_e = (
       ARCH_INVALID = 0, (*!< Invalid architecture.   *)
       ARCH_AARCH64,     (*!< AArch64 architecture.   *)
+      ARCH_ARM32,       (*!< ARM32 architecture.     *)
       ARCH_X86,         (*!< X86 architecture.       *)
       ARCH_X86_64);     (*!< X86_64 architecture.    *)
 
@@ -168,10 +169,16 @@ type
       //! Types of shift
       shift_e = (
         ID_SHIFT_INVALID = 0, //!< invalid
-        ID_SHIFT_ASR,         //!< Arithmetic Shift Right
-        ID_SHIFT_LSL,         //!< Logical Shift Left
-        ID_SHIFT_LSR,         //!< Logical Shift Right
-        ID_SHIFT_ROR,         //!< Rotate Right
+        ID_SHIFT_ASR,         //!< Arithmetic Shift Right (immediate)
+        ID_SHIFT_LSL,         //!< Logical Shift Left (immediate)
+        ID_SHIFT_LSR,         //!< Logical Shift Right (immediate)
+        ID_SHIFT_ROR,         //!< Rotate Right (immediate)
+        ID_SHIFT_RRX,         //!< Rotate Right with Extend (immediate)
+        ID_SHIFT_ASR_REG,     //!< Arithmetic Shift Right (register)
+        ID_SHIFT_LSL_REG,     //!< Logical Shift Left (register)
+        ID_SHIFT_LSR_REG,     //!< Logical Shift Right (register)
+        ID_SHIFT_ROR_REG,     //!< Rotate Right (register)
+        ID_SHIFT_RRX_REG,     //!< Rotate Right with Extend (register)
         ID_SHIFT_LAST_ITEM);  //!< Must be the last item
 
 
@@ -215,6 +222,7 @@ type
         ALIGNED_MEMORY,                 //!< [symbolic] Keep a map of aligned memory.
         AST_OPTIMIZATIONS,              //!< [AST] Classical arithmetic optimisations to reduce the depth of the trees.
         CONCRETIZE_UNDEFINED_REGISTERS, //!< [symbolic] Concretize every registers tagged as undefined (see #750).
+        CONSTANT_FOLDING,               //!< [symbolic] Perform a constant folding optimization of sub ASTs which do not contain symbolic variables.
         ONLY_ON_SYMBOLIZED,             //!< [symbolic] Perform symbolic execution only on symbolized expressions.
         ONLY_ON_TAINTED,                //!< [symbolic] Perform symbolic execution only on tainted instructions.
         PC_TRACKING_SYMBOLIC,           //!< [symbolic] Track path constraints only if they are symbolized.
@@ -271,58 +279,59 @@ type
 
     ///*! Enumerates all types of node. Must be prime numbers. */
     ast_e = (
-      INVALID_NODE = 0,               ///*!< Invalid node */
-      ANY_NODE = 0,                   ///*!< Any node */
-      ASSERT_NODE = 3,                ///*!< (assert x) */
-      BVADD_NODE = 5,                 ///*!< (bvadd x y) */
-      BVAND_NODE = 7,                 ///*!< (bvand x y) */
-      BVASHR_NODE = 12,               ///*!< (bvashr x y) */
-      BVLSHR_NODE = 17,               ///*!< (bvlshr x y) */
-      BVMUL_NODE = 19,                ///*!< (bvmul x y) */
-      BVNAND_NODE = 23,               ///*!< (bvnand x y) */
-      BVNEG_NODE = 29,                ///*!< (bvneg x) */
-      BVNOR_NODE = 31,                ///*!< (bvnor x y) */
-      BVNOT_NODE = 37,                ///*!< (bvnot x) */
-      BVOR_NODE = 41,                 ///*!< (bvor x y) */
-      BVROL_NODE = 43,                ///*!< ((_ rotate_left x) y) */
-      BVROR_NODE = 47,                ///*!< ((_ rotate_right x) y) */
-      BVSDIV_NODE = 53,               ///*!< (bvsdiv x y) */
-      BVSGE_NODE = 59,                ///*!< (bvsge x y) */
-      BVSGT_NODE = 61,                ///*!< (bvsgt x y) */
-      BVSHL_NODE = 67,                ///*!< (bvshl x y) */
-      BVSLE_NODE = 71,                ///*!< (bvsle x y) */
-      BVSLT_NODE = 73,                ///*!< (bvslt x y) */
-      BVSMOD_NODE = 79,               ///*!< (bvsmod x y) */
-      BVSREM_NODE = 83,               ///*!< (bvsrem x y) */
-      BVSUB_NODE = 89,                ///*!< (bvsub x y) */
-      BVUDIV_NODE = 97,               ///*!< (bvudiv x y) */
-      BVUGE_NODE = 101,               ///*!< (bvuge x y) */
-      BVUGT_NODE = 103,               ///*!< (bvugt x y) */
-      BVULE_NODE = 107,               ///*!< (bvule x y) */
-      BVULT_NODE = 109,               ///*!< (bvult x y) */
-      BVUREM_NODE = 113,              ///*!< (bvurem x y) */
-      BVXNOR_NODE = 127,              ///*!< (bvxnor x y) */
-      BVXOR_NODE = 131,               ///*!< (bvxor x y) */
-      BV_NODE = 137,                  ///*!< (_ bvx y) */
-      COMPOUND_NODE = 139,            ///*!< A compound of nodes */
-      CONCAT_NODE = 149,              ///*!< (concat x y z ...) */
-      DECLARE_NODE = 151,             ///*!< (declare-fun <var_name> () (_ BitVec <var_size>)) */
-      DISTINCT_NODE = 157,            ///*!< (distinct x y) */
-      EQUAL_NODE = 163,               ///*!< (= x y) */
-      EXTRACT_NODE = 167,             ///*!< ((_ extract x y) z) */
-      IFF_NODE = 173,                 ///*!< (iff x y) */
-      INTEGER_NODE = 179,             ///*!< Integer node */
-      ITE_NODE = 181,                 ///*!< (ite x y z) */
-      LAND_NODE = 191,                ///*!< (and x y) */
-      LET_NODE = 193,                 ///*!< (let ((x y)) z) */
-      LNOT_NODE = 197,                ///*!< (and x y) */
-      LOR_NODE = 199,                 ///*!< (or x y) */
-      REFERENCE_NODE = 211,           ///*!< Reference node */
-      STRING_NODE = 223,              ///*!< String node */
-      SX_NODE = 227,                  ///*!< ((_ sign_extend x) y) */
-      VARIABLE_NODE = 229,            ///*!< Variable node */
-      ZX_NODE = 233);                 ///*!< ((_ zero_extend x) y) */
-
+      INVALID_NODE = 0,               //*!< Invalid node */
+      ANY_NODE = 0,                   //*!< Any node */
+      ASSERT_NODE = 3,                //*!< (assert x) */
+      BVADD_NODE = 5,                 //*!< (bvadd x y) */
+      BVAND_NODE = 7,                 //*!< (bvand x y) */
+      BVASHR_NODE = 12,               //*!< (bvashr x y) */
+      BVLSHR_NODE = 17,               //*!< (bvlshr x y) */
+      BVMUL_NODE = 19,                //*!< (bvmul x y) */
+      BVNAND_NODE = 23,               //*!< (bvnand x y) */
+      BVNEG_NODE = 29,                //*!< (bvneg x) */
+      BVNOR_NODE = 31,                //*!< (bvnor x y) */
+      BVNOT_NODE = 37,                //*!< (bvnot x) */
+      BVOR_NODE = 41,                 //*!< (bvor x y) */
+      BVROL_NODE = 43,                //*!< ((_ rotate_left x) y) */
+      BVROR_NODE = 47,                //*!< ((_ rotate_right x) y) */
+      BVSDIV_NODE = 53,               //*!< (bvsdiv x y) */
+      BVSGE_NODE = 59,                //*!< (bvsge x y) */
+      BVSGT_NODE = 61,                //*!< (bvsgt x y) */
+      BVSHL_NODE = 67,                //*!< (bvshl x y) */
+      BVSLE_NODE = 71,                //*!< (bvsle x y) */
+      BVSLT_NODE = 73,                //*!< (bvslt x y) */
+      BVSMOD_NODE = 79,               //*!< (bvsmod x y) */
+      BVSREM_NODE = 83,               //*!< (bvsrem x y) */
+      BVSUB_NODE = 89,                //*!< (bvsub x y) */
+      BVUDIV_NODE = 97,               //*!< (bvudiv x y) */
+      BVUGE_NODE = 101,               //*!< (bvuge x y) */
+      BVUGT_NODE = 103,               //*!< (bvugt x y) */
+      BVULE_NODE = 107,               //*!< (bvule x y) */
+      BVULT_NODE = 109,               //*!< (bvult x y) */
+      BVUREM_NODE = 113,              //*!< (bvurem x y) */
+      BVXNOR_NODE = 127,              //*!< (bvxnor x y) */
+      BVXOR_NODE = 131,               //*!< (bvxor x y) */
+      BV_NODE = 137,                  //*!< (_ bvx y) */
+      COMPOUND_NODE = 139,            //*!< A compound of nodes */
+      CONCAT_NODE = 149,              //*!< (concat x y z ...) */
+      DECLARE_NODE = 151,             //*!< (declare-fun <var_name> () (_ BitVec <var_size>)) */
+      DISTINCT_NODE = 157,            //*!< (distinct x y) */
+      EQUAL_NODE = 163,               //*!< (= x y) */
+      EXTRACT_NODE = 167,             //*!< ((_ extract x y) z) */
+      FORALL_NODE = 173,              //*!< (forall ((x (_ BitVec <size>)), ...) body) */
+      IFF_NODE = 179,                 //*!< (iff x y) */
+      INTEGER_NODE = 181,             //*!< Integer node */
+      ITE_NODE = 191,                 //*!< (ite x y z) */
+      LAND_NODE = 193,                //*!< (and x y) */
+      LET_NODE = 197,                 //*!< (let ((x y)) z) */
+      LNOT_NODE = 199,                //*!< (and x y) */
+      LOR_NODE = 211,                 //*!< (or x y) */
+      LXOR_NODE = 223,                //*!< (xor x y) */
+      REFERENCE_NODE = 227,           //*!< Reference node */
+      STRING_NODE = 229,              //*!< String node */
+      SX_NODE = 233,                  //*!< ((_ sign_extend x) y) */
+      VARIABLE_NODE = 239,            //*!< Variable node */
+      ZX_NODE = 241);                 //*!< ((_ zero_extend x) y) */
 
 
 (*                     ---------End AstEnum.hpp---------            *)
