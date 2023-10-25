@@ -39,6 +39,7 @@ type
      procedure   Create(regId : register_e ; name: PAnsiChar; parent: register_e; high, low: uint32; vmutable: Boolean); overload;
      procedure   Create(cpu : HandleCpuInterface; regId: register_e); overload;
      procedure   Create(other: Registro); overload;
+     function    isOverlapWith(other: Registro): Boolean ;
      procedure   Free;
      function    ToStr: string;
 
@@ -66,8 +67,9 @@ type
         function REGCreateRegisterFrom(other: HandleReg): HandleReg;cdecl;  external Triton_dll Name 'REGCreateRegisterFrom';
 
         //! Destructor.
-
-	      procedure REGDelete(Handle: HandleReg);cdecl;  external Triton_dll Name 'REGDelete';
+        procedure REGDelete(Handle: HandleReg);cdecl;  external Triton_dll Name 'REGDelete';
+        //! Returns true if `other` and `self` overlap.
+        function REGisOverlapWith(r1, other: HandleReg): Boolean ;cdecl;  external Triton_dll Name 'REGisOverlapWith';
 
 implementation
 
@@ -153,6 +155,11 @@ end;
 class operator Registro.Implicit(rReg: Registro): HandleReg;
 begin
     Result := rReg.FHReg;
+end;
+
+function Registro.isOverlapWith(other: Registro): Boolean;
+begin
+    Result := REGisOverlapWith(FHReg,other);
 end;
 
 procedure Registro.Free;

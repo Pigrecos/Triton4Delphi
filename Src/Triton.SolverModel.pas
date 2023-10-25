@@ -103,7 +103,7 @@ end;
 
 function SolverModel.ToStr: string;
 begin
-    Result := Format('%s =0x%d',[FVariable.ToStr,FValue] )
+    Result := Format('%s =0x%x',[FVariable.ToStr,FValue] )
 end;
 
 end.

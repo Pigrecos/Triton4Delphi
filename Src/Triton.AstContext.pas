@@ -49,6 +49,7 @@ type
       procedure Create(other: TAstRepresentation); overload;
       procedure Free;
       class operator Explicit(hAst: HandleAstContext): AstContext;
+      class operator Implicit(hAst: HandleAstContext): AstContext;
       class operator Explicit(rAst: AstContext): HandleAstContext;
 
       function  assert_(expr: AbstractNode):AbstractNode;
@@ -109,8 +110,11 @@ type
       function  getVariableValue(varName: PAnsiChar):uint64 ;
       procedure setRepresentationMode(mode: uint32);
       function  getRepresentationMode():uint32 ;
+      function  Search(Node : AbstractNode; match: ast_e=ANY_NODE): TArray<AbstractNode>;
+      function  unroll(node: AbstractNode): AbstractNode;
   end;
 
+  function  Triton_Ast_unroll(node: AbstractNode): AbstractNode;
 
  (*  Modes ============================================================================== *)
 
@@ -262,6 +266,10 @@ type
         procedure  CtxsetRepresentationMode(hCtx: HandleAstContext ; mode: uint32); cdecl;  external Triton_dll Name 'setRepresentationMode';
         //! Gets the representations mode of this astContext
         function  CtxgetRepresentationMode(hCtx: HandleAstContext):uint32 ;cdecl;  external Triton_dll Name 'getRepresentationMode';
+        //! Returns a deque of collected matched nodes via a depth-first pre order traversal.
+	      function Node_search(node: HandleAbstractNode; var outArray: PAHNode; match : ast_e = ANY_NODE): UInt32; cdecl;  external Triton_dll Name 'Node_search';
+        //! AST C++ API - Unrolls the SSA form of a given AST.
+        function Node_unroll(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_unroll';
 
 implementation
 
@@ -362,6 +370,12 @@ begin
 end;
 
 class operator AstContext.Explicit(hAst: HandleAstContext): AstContext;
+begin
+    ZeroMemory(@Result,SizeOf(AstContext));
+    Result.FAstCtx := hAst;
+end;
+
+class operator AstContext.Implicit(hAst: HandleAstContext): AstContext;
 begin
     ZeroMemory(@Result,SizeOf(AstContext));
     Result.FAstCtx := hAst;
@@ -660,6 +674,37 @@ end;
 function AstContext.extract(high, low: uint32; expr: AbstractNode): AbstractNode;
 begin
    Result := Ctxextract(FAstCtx,high,low,expr)
+end;
+
+function AstContext.Search(Node: AbstractNode; match: ast_e): TArray<AbstractNode>;
+var
+  outArray: PAHNode ;
+  res     : TArray<AbstractNode>;
+  n       : UInt32;
+  i       : Int32;
+begin
+    outArray := nil;
+    n :=  Node_search(Node,outArray,match);
+
+    res := [];
+   // if n < 1 then Exit;
+
+    for i := 0 to n - 1 do
+       res := res + [ AbstractNode(outArray[i]) ] ;
+
+    Result := res;
+
+end;
+
+function AstContext.unroll(node: AbstractNode): AbstractNode;
+begin
+    Result := AbstractNode (Node_unroll(node));
+end;
+
+// emulate triton::ast::unroll
+function  Triton_Ast_unroll(node: AbstractNode): AbstractNode;
+begin
+    Result := AbstractNode (Node_unroll(node));
 end;
 
 end.

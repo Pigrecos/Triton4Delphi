@@ -28,13 +28,16 @@ type
     public
       procedure Create(tipo: variable_e; origin: uint64; id: usize; size: uint32;	comment: PAnsiChar= nil); overload;
       procedure Create(other: SymbolicVar);overload;
+      function  getBitSize : uint32 ;
+      function  IsAssigned: Boolean;
       procedure Free;
-      function ToStr:string;
+      function  ToStr:string;
 
       class operator Implicit(hSymVar: HandleSharedSymbolicVariable): SymbolicVar;
       class operator Explicit(hSymVar: HandleSharedSymbolicVariable): SymbolicVar;
       class operator Explicit(rSymVar: SymbolicVar): HandleSharedSymbolicVariable;
       class operator Equal(s1,s2:SymbolicVar):Boolean;
+      class operator NotEqual(s1,s2:SymbolicVar):Boolean;
 
       property Tipo    : variable_e read getType;
       property Alias   : AnsiString read getAlias   write setAlias;
@@ -99,9 +102,19 @@ begin
     FHSymVar := SVCreateSymbolicVariableFrom( HandleSharedSymbolicVariable(other) )
 end;
 
+function SymbolicVar.IsAssigned: Boolean;
+begin
+   Result := FHSymVar  <> nil
+end;
+
+class operator SymbolicVar.NotEqual(s1, s2: SymbolicVar): Boolean;
+begin
+    Result := NativeUint(s1.FHSymVar^) <> NativeUint(s2.FHSymVar^);
+end;
+
 class operator SymbolicVar.Equal(s1, s2: SymbolicVar): Boolean;
 begin
-     Result := s1.FHSymVar = s2.FHSymVar;
+     Result := NativeUint(s1.FHSymVar^) =  NativeUint(s2.FHSymVar^);
 end;
 
 class operator SymbolicVar.Implicit(hSymVar: HandleSharedSymbolicVariable): SymbolicVar;
@@ -133,6 +146,11 @@ var
 begin
     SVgetAlias(FHSymVar,p);
     Result := AnsiString(p)
+end;
+
+function SymbolicVar.getBitSize: uint32;
+begin
+   Result := getSize
 end;
 
 function SymbolicVar.getComment: AnsiString;

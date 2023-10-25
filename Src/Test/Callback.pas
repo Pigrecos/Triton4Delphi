@@ -45,10 +45,10 @@ implementation
             UntMain;
 
 var
- Triton : TApi;
+ Triton : TTritonCtx;
  flag   : Boolean;
 
-procedure cb_flag(aApi : HandleApi; reg_mem: Pointer);cdecl;
+procedure cb_flag(aApi : HandleContext; reg_mem: Pointer);cdecl;
 begin
     flag := True;
 end;
@@ -148,7 +148,7 @@ const code : array[0..2] of op  = (
         Triton.SetMode(ALIGNED_MEMORY, True);
    end;
 
-   procedure handle_mem_read(ctx : HandleApi; ma: HandleMemAcc);
+   procedure handle_mem_read(ctx : HandleContext; ma: HandleMemAcc);
    var
      addr   : UInt64;
      comment: string;
@@ -166,7 +166,7 @@ const code : array[0..2] of op  = (
         mem_symvars := mem_symvars +  [ symvar ]
    end;
 
-   Procedure handle_reg_read(ctx: HandleApi; reg: HandleReg);
+   Procedure handle_reg_read(ctx: HandleContext; reg: HandleReg);
    var
      reg_id : UInt32;
      comment: string;
@@ -214,8 +214,8 @@ begin
     emulate($400000);
     ast := Triton.getAstContext;
     rax := Triton.getSymbolicRegister( Triton.getRegister(ID_REG_X86_RAX) );
-    sUnRoll :=  (rax.Ast).unroll.ToStr;
-    assert(sUnRoll = '(bvadd SymVar_2 SymVar_3)') ;
+    sUnRoll :=  ast.unroll(rax.Ast).ToStr;
+    assert(sUnRoll = '(bvadd sym_reg_{rax} sym_reg_{rbx})') ;
 
     Triton.Free;
 
@@ -250,7 +250,7 @@ begin
 
     ast_original  := ast.bvadd(ast.variable(var1), ast.variable(var2)) ;
     ast_duplicate := ast_original.duplicate;
-    ast_unrolled  := ast_original.unroll;
+    ast_unrolled  := ast.unroll(ast_original);
 
     Triton.setConcreteVariableValue(var1, 4);
     Triton.setConcreteVariableValue(var2, 2) ;

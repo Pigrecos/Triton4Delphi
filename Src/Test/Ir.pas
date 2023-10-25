@@ -80,7 +80,7 @@ implementation
             UntMain;
 
 var
- Triton : TApi;
+ Triton : TTritonCtx;
  dFunc   : TDictionary<UInt64,TArray<Byte>>;
 
 procedure main_Ir;

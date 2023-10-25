@@ -102,8 +102,29 @@ ID_REG_X86_MM5,    // mm5
 ID_REG_X86_MM6,    // mm6
 ID_REG_X86_MM7,    // mm7
 
+(* STX *)
+ID_REG_X86_ST0,  // st0
+ID_REG_X86_ST1,  // st1
+ID_REG_X86_ST2,  // st2
+ID_REG_X86_ST3,  // st3
+ID_REG_X86_ST4,  // st4
+ID_REG_X86_ST5,  // st5
+ID_REG_X86_ST6,  // st6
+ID_REG_X86_ST7,  // st7
+
+(* FPU *)
+ID_REG_X86_FTW, // ftw
+ID_REG_X86_FCW, // fcw
+ID_REG_X86_FSW, // fsw
+ID_REG_X86_FOP, // fop
+ID_REG_X86_FCS, // fcs
+ID_REG_X86_FDS, // fds
+ID_REG_X86_FIP, // fip
+ID_REG_X86_FDP, // fdp
+
 (* SSE *)
-RID_REG_X86_MXCSR,
+ID_REG_X86_MXCSR,
+ID_REG_X86_MXCSR_MASK,
 
 ID_REG_X86_XMM0,   // xmm0
 ID_REG_X86_XMM1,   // xmm1
@@ -219,22 +240,60 @@ ID_REG_X86_VM,   // vm
 ID_REG_X86_ZF,   // zf
 
 (* SSE flags *)
-ID_REG_X86_IE,   // ie (Invalid Operation Flag)
-ID_REG_X86_DE,   // de (Denormal Flag)
-ID_REG_X86_ZE,   // ze (Divide By Zero Flag)
-ID_REG_X86_OE,   // oe (Overflow Flag)
-ID_REG_X86_UE,   // ue (Underflow Flag)
-ID_REG_X86_PE,   // pe (Precision Flag)
-ID_REG_X86_DAZ,  // daz (Invalid Operation Flag)
-ID_REG_X86_IM,   // im (Invalid Operation Mask)
-ID_REG_X86_DM,   // dm (Denormal Mask)
-ID_REG_X86_ZM,   // zm (Divide By Zero Mask)
-ID_REG_X86_OM,   // om (Overflow Mask)
-ID_REG_X86_UM,   // um (Underflow Mask)
-ID_REG_X86_PM,   // pm (Precision Mask)
-ID_REG_X86_RL,   // rl (Round Negative)
-ID_REG_X86_RH,   // rh (Round Positive)
-ID_REG_X86_FZ,   // fz (Flush To Zero)
+ID_REG_X86_SSE_IE,   // ie (Invalid Operation Flag)
+ID_REG_X86_SSE_DE,   // de (Denormal Flag)
+ID_REG_X86_SSE_ZE,   // ze (Divide By Zero Flag)
+ID_REG_X86_SSE_OE,   // oe (Overflow Flag)
+ID_REG_X86_SSE_UE,   // ue (Underflow Flag)
+ID_REG_X86_SSE_PE,   // pe (Precision Flag)
+ID_REG_X86_SSE_DAZ,  // daz (Invalid Operation Flag)
+ID_REG_X86_SSE_IM,   // im (Invalid Operation Mask)
+ID_REG_X86_SSE_DM,   // dm (Denormal Mask)
+ID_REG_X86_SSE_ZM,   // zm (Divide By Zero Mask)
+ID_REG_X86_SSE_OM,   // om (Overflow Mask)
+ID_REG_X86_SSE_UM,   // um (Underflow Mask)
+ID_REG_X86_SSE_PM,   // pm (Precision Mask)
+ID_REG_X86_SSE_RL,   // rl (Round Negative)
+ID_REG_X86_SSE_RH,   // rh (Round Positive)
+ID_REG_X86_SSE_FZ,   // fz (Flush To Zero)
+
+(* FPU flags *)
+ID_REG_X86_FCW_IM,  // im (Invalid Operation Mask)
+ID_REG_X86_FCW_DM,  // dm (Denormal Mask)
+ID_REG_X86_FCW_ZM,  // zm (Divide By Zero Mask)
+ID_REG_X86_FCW_OM,  // om (Overflow Mask)
+ID_REG_X86_FCW_UM,  // um (Underflow Mask)
+ID_REG_X86_FCW_PM,  // pm (Precision Mask)
+ID_REG_X86_FCW_PC,  // pc (Precision Control)
+ID_REG_X86_FCW_RC,  // rc (Rounding Control)
+ID_REG_X86_FCW_X,   // x  (Infinity Control)
+
+ID_REG_X86_FSW_IE,  // ie (Invalid Operation Mask)
+ID_REG_X86_FSW_DE,  // de (Denormal Mask)
+ID_REG_X86_FSW_ZE,  // ze (Divide By Zero Mask)
+ID_REG_X86_FSW_OE,  // oe (Overflow Mask)
+ID_REG_X86_FSW_UE,  // ue (Underflow Mask)
+ID_REG_X86_FSW_PE,  // pe (Precision Mask)
+ID_REG_X86_FSW_SF,  // sf (Stack Fault)
+ID_REG_X86_FSW_ES,  // ef (Error Summary Status)
+ID_REG_X86_FSW_C0,  // c0 (Condition Code 0)
+ID_REG_X86_FSW_C1,  // c1 (Condition Code 1)
+ID_REG_X86_FSW_C2,  // c2 (Condition Code 2)
+ID_REG_X86_FSW_TOP, // top (Top of Stack Pointer)
+ID_REG_X86_FSW_C3,  // c3 (Condition Code 3)
+ID_REG_X86_FSW_B,   // b (FPU Busy)
+
+(* EFER *)
+ID_REG_X86_EFER, // efer
+
+ID_REG_X86_EFER_TCE,   // efer_tce
+ID_REG_X86_EFER_FFXSR, // efer_ffxsr
+ID_REG_X86_EFER_LMSLE, // efer_lmsle
+ID_REG_X86_EFER_SVME,  // efer_svme
+ID_REG_X86_EFER_NXE,   // efer_nxe
+ID_REG_X86_EFER_LMA,   // efer_lma
+ID_REG_X86_EFER_LME,   // efer_lme
+ID_REG_X86_EFER_SCE,   // efer_sce
 
 (* Segments *)
 ID_REG_X86_CS,     // Code Segment
@@ -243,6 +302,9 @@ ID_REG_X86_ES,     // Extra Segment
 ID_REG_X86_FS,     // FS Segment
 ID_REG_X86_GS,     // GS Segment
 ID_REG_X86_SS,     // Stack Segment
+
+(* Model-Specific Registers (MSR) *)
+ID_REG_X86_TSC,     // Time-Stamp Counter
 
 (******** aarch64.spec *********)
 // Thirty-one 64-bit general-purpose registers 

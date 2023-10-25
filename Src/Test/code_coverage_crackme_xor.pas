@@ -105,7 +105,7 @@ implementation
 
 var
  test_count : Integer;
- Triton : TApi;
+ Triton : TTritonCtx;
  dFunc   : TDictionary<UInt64,TArray<Byte>>;
 
 // This function emulates the code.
@@ -207,12 +207,12 @@ begin
                 if br.taken= False then
                 begin
                     // Ask for a model
-                    models := Triton.getModel( astCtxt.land( previousConstraints, br.pc) );
+                    models := Triton.getModel( astCtxt.land( previousConstraints, br.pc) ).Value1;
                     seed   := TDictionary<UInt64,UInt64>.Create;
                     for n in models do
                     begin
                         // Get the symbolic variable assigned to the model
-                        symVar := symbolicVar( Triton.getSymbolicVariableFromId(n.Key) );
+                        symVar := symbolicVar( Triton.getSymbolicVariable(n.Key) );
                         // Save the new input as seed.
                         seed.AddOrSetValue(symVar.Origin,  n.Value.Value);
                     end;

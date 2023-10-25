@@ -35,6 +35,10 @@ type
     btnIr: TBitBtn;
     btnsimply: TBitBtn;
     btnCallback: TBitBtn;
+    btn1: TBitBtn;
+    btn2: TBitBtn;
+    procedure btn1Click(Sender: TObject);
+    procedure btn2Click(Sender: TObject);
     procedure btnStandard_testClick(Sender: TObject);
     procedure btnOp_PreClick(Sender: TObject);
     procedure btnCoverageClick(Sender: TObject);
@@ -88,7 +92,9 @@ implementation
             forward_tainting,
             backward_slicing,
             ir,
-            test_path_constraint;
+            test_path_constraint,
+            BasicBlock,
+            vmp_attach;
 
 {$R *.dfm}
 
@@ -100,7 +106,7 @@ end;
 procedure TForm1.btnStandard_testClick(Sender: TObject);
 var
   mem1, mem2 : MemAccess;
-  vApi       : TApi;
+  vApi       : TTritonCtx;
 
   rBv              : BitVector  ;
   rImm,rImm1,rImm2 : Immediate ;
@@ -361,7 +367,7 @@ end;
 
 procedure TForm1.test6;
 var
-  ctx                : TApi;
+  ctx                : TTritonCtx;
   inst1,inst2,inst3,
   inst4,inst5,inst6  : Istruzione;
   mem1               : MemAccess;
@@ -457,7 +463,7 @@ end;
 
 procedure TForm1.test7;
 var
-  ctx : TApi;
+  ctx : TTritonCtx;
 begin
     ctx.Create;
     ctx.setArchitecture(ARCH_X86);
@@ -567,6 +573,36 @@ type
   end;
 
 
+procedure TForm1.btn1Click(Sender: TObject);
+begin
+    // vmp_traces/sample2.vmp.trace --symsize 4
+    analysis('vmp_traces/sample2.vmp.trace', '', 4, 0 );
+
+    // vmp_traces/sample3.vmp.trace --symsize 1
+    analysis('vmp_traces/sample3.vmp.trace', '', 1, 0 );
+
+    // vmp_traces/sample5.vmp.trace.1 --symsize 4
+    analysis('vmp_traces/sample5.vmp.trace.1', '', 4, 0 );
+
+    // --trace1 ./vmp_traces/sample5.vmp.trace.1 --symsize 4 --trace2 ././vmp_traces/sample5.vmp.trace.2 --vbraddr 0x80d905 --vbrflag af
+    //analysis('vmp_traces/sample5.vmp.trace.1', 'vmp_traces/sample5.vmp.trace.2', 4, $80d905, ID_REG_X86_AF );
+end;
+
+procedure TForm1.btn2Click(Sender: TObject);
+var
+  Triton : TTritonCtx;
+begin
+    Triton.Create(ARCH_X86_64);
+    Triton.disassembly(BBlock, $140004149);
+    Log(BBlock.ToStr);
+
+    var sblock := Triton.simplify(BBlock);
+
+    Triton.disassembly(sblock, $140004149);
+    Log(sblock.ToStr);
+
+end;
+
 procedure TForm1.btnIrClick(Sender: TObject);
 begin
     mmoLog.Clear;
@@ -626,7 +662,7 @@ const trace : array[0..1] of op  = (
                                    );
 
 var
- api       : TApi;
+ api       : TTritonCtx;
  inst      : Istruzione;
  raxSymS   : symbolicExp;
  raxFullAst,
@@ -655,7 +691,7 @@ begin
   Log('Exp. simbolica: '+raxSymS.ToStr);
 
   (* Get the RAX full AST *)
-  raxFullAst := raxSymS.Ast.unroll;
+  raxFullAst := Triton_Ast_unroll(raxSymS.Ast);
 
   log('test - raxFullAst.Childrens[0] '+ raxFullAst.Childrens[0].str );
   log('test - raxFullAst.Childrens[1] '+ raxFullAst.Childrens[1].ToStr );
@@ -673,7 +709,7 @@ begin
   log('constraint:  '+ constraint.ToStr);
 
   (* Ask a model *)
-  model := api.getModel(constraint);
+  model := api.getModel(constraint).Value1;
 
   (* Display all symbolic variable value contained in the model *)
   log('Model:');
@@ -696,7 +732,7 @@ const trace : array[0..2] of op  = (
 
 var
  i         : Integer;
- api       : TApi;
+ api       : TTritonCtx;
  inst      : Istruzione;
  rip       : AbstractNode;
  whip      : AbstractNode;
@@ -724,7 +760,7 @@ begin
   api.processing(inst);
 
   (* #  Build rip *)
-  rip := api.getSymbolicRegister( api.getRegister(ID_REG_X86_RIP) ).Ast.unroll;
+  rip := Triton_Ast_unroll( api.getSymbolicRegister( api.getRegister(ID_REG_X86_RIP) ).Ast);
 
   //* Display rip's AST*/
   log('rip expr: '+ rip.ToStr);
@@ -768,7 +804,7 @@ end;
 
 procedure TForm1.Test_Conversion_01;
 var
-  api       : TApi;
+  api       : TTritonCtx;
   inst      : Istruzione;
   j         : Integer;
   g         : TArray<Registro>;
@@ -843,7 +879,7 @@ const trace : array[0..5] of op  = (
                                    );
 
 var
- api       : TApi;
+ api       : TTritonCtx;
  i,j       : Integer;
  inst      : Istruzione;
 
@@ -887,7 +923,7 @@ end;
 
 procedure TForm1.test_taint_get_tainted_registers;
 var
- Triton : TApi;
+ Triton : TTritonCtx;
  r      : TArray<Registro>;
  function  assertTrue(v:Registro; regs: TArray<Registro>):Boolean;
  var
@@ -927,7 +963,7 @@ end;
 
 procedure TForm1.test_taint_get_tainted_memory;
 var
- Triton : TApi;
+ Triton : TTritonCtx;
  uAdd   : TArray<UInt64>;
  m      : MemAccess;
 

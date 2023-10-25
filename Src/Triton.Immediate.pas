@@ -61,7 +61,8 @@ type
 	      procedure  IMMDelete(Handle: HandleImmediate); cdecl;  external Triton_dll Name 'IMMDelete';
         //! Sets the value of the operand.
         procedure  IMMsetValue(vImm: HandleImmediate; v: uint64; size: uint32);cdecl;  external Triton_dll Name 'IMMsetValue';
-
+
+
 
 implementation
 

@@ -42,7 +42,7 @@ implementation
             UntMain;
 
 var
- Triton : TApi;
+ Triton : TTritonCtx;
 
 procedure test_trace(trace: array of op);
 var
@@ -77,8 +77,8 @@ begin
         //Test getPathConstraintsAst//
         astCtx := Triton.getAstContext;
         crst := Triton.getPathPredicate;
-        assert(Triton.getModel(crst).Count <> 0);
-        assert( Triton.getModel( astCtx.lnot(crst)).Count <> 0) ;
+        assert(Triton.getModel(crst).Value1.Count  <> 0);
+        assert( Triton.getModel( astCtx.lnot(crst)).Value1.Count <> 0) ;
 end;
 
 procedure test_getPathConstraints;

@@ -102,7 +102,7 @@ implementation
             UntMain;
 
 var
- Triton : TApi;
+ Triton : TTritonCtx;
 
 procedure symbolization_init;
 begin
@@ -139,7 +139,7 @@ begin
             // Opaque Predicate AST
             op_ast := Triton.getPathPredicate;
             // Try another model
-            model := Triton.getModel(astCtxt.lnot(op_ast));
+            model := Triton.getModel(astCtxt.lnot(op_ast)).Value1;
             if Assigned(model) and  (model.Count > 0) then
                 Form1.Log('not an opaque predicate')
             else

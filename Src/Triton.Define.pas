@@ -68,40 +68,28 @@ type
 (**********************************************************************)
     //! unisgned 8-bits
     uint8 = Byte;
-
    (* //! unsigned 128-bits
     typedef boost::multiprecision::uint128_t uint128;
-
     //! unsigned 256-bits
     typedef boost::multiprecision::uint256_t uint256;
-
     //! unsigned 512-bits
     typedef boost::multiprecision::uint512_t uint512;   *)
-
     //! signed 8-bits
     sint8 = Int8;
-
     //! signed 16-bits
     sint16 = Int16;
-
     //! signed 32-bits
     sint32 = Int32;
-
     //! signed 64-bits
     sint64 = Int64;
-
     (*)/! signed 128-bits
     typedef boost::multiprecision::int128_t sint128;
-
     //! signed 256-bits
     typedef boost::multiprecision::int256_t sint256;
-
     //! signed 512-bits
     typedef boost::multiprecision::int512_t sint512; *)
-
     //! unsigned MAX_INT 32 or 64 bits according to the CPU.
     usize = NativeUInt;
-
     {$IFDEF  CPUX64}
     //! unsigned long long if the arch is 64-bits.
     __uint = UInt64 ;
@@ -135,6 +123,15 @@ type
       OP_IMM,         //!< immediate operand
       OP_MEM,         //!< memory operand
       OP_REG);        //!< register operand
+
+   (*! Types of exceptions *)
+   exception_e = (
+      NO_FAULT = 0,     (*!< Succeed, no fault.                       *)
+      FAULT_DE,         (*!< Fault raised: Divide-by-zero.            *)
+      FAULT_BP,         (*!< Fault raised: Breakpoint.                *)
+      FAULT_UD,         (*!< Fault raised: Instruction not supported. *)
+      FAULT_GP          (*!< Fault raised: General Protection Fault.  *)
+    );
 
 
     //! Types of register.
@@ -181,7 +178,6 @@ type
         ID_SHIFT_RRX_REG,     //!< Rotate Right with Extend (register)
         ID_SHIFT_LAST_ITEM);  //!< Must be the last item
 
-
       //! Types of extend
       extend_e = (
         ID_EXTEND_INVALID = 0,   //!< invalid
@@ -194,7 +190,6 @@ type
         ID_EXTEND_SXTW,          //!< Extracts a word (32-bit) value from a register and zero extends it to the size of the register
         ID_EXTEND_SXTX,          //!< Use the whole 64-bit register
         ID_EXTEND_LAST_ITEM);    //!< Must be the last item
-
       //! Types of condition
       condition_e = (
         ID_CONDITION_INVALID = 0, //!< invalid
@@ -214,19 +209,20 @@ type
         ID_CONDITION_VC,          //!< No overflow. V clear.
         ID_CONDITION_VS,          //!< Overflow. V set.
         ID_CONDITION_LAST_ITEM);  //!< must be the last item.
-
 (*                         ---------End archEnums.hpp---------            *)
-
 (*                         ---------ModesEnums.hpp-------                 *)
       mode_e = (
         ALIGNED_MEMORY,                 //!< [symbolic] Keep a map of aligned memory.
         AST_OPTIMIZATIONS,              //!< [AST] Classical arithmetic optimisations to reduce the depth of the trees.
         CONCRETIZE_UNDEFINED_REGISTERS, //!< [symbolic] Concretize every registers tagged as undefined (see #750).
         CONSTANT_FOLDING,               //!< [symbolic] Perform a constant folding optimization of sub ASTs which do not contain symbolic variables.
+        MEMORY_ARRAY,                   //!< [symbolic] Enable memory symbolic array
         ONLY_ON_SYMBOLIZED,             //!< [symbolic] Perform symbolic execution only on symbolized expressions.
         ONLY_ON_TAINTED,                //!< [symbolic] Perform symbolic execution only on tainted instructions.
         PC_TRACKING_SYMBOLIC,           //!< [symbolic] Track path constraints only if they are symbolized.
         SYMBOLIZE_INDEX_ROTATION,       //!< [symbolic] Symbolize index rotation for bvrol and bvror (see #751). This mode increases the complexity of solving.
+        SYMBOLIZE_LOAD,                 //!< [symbolic] Symbolize memory load if memory array is enabled
+        SYMBOLIZE_STORE,                //!< [symbolic] Symbolize memory store if memory array is enabled
         TAINT_THROUGH_POINTERS);        //!< [taint] Spread the taint if an index pointer is already tainted (see #725).
 (*                         ---------End modesEnums.hpp---------            *)
 
@@ -248,9 +244,21 @@ type
         {$IFDEF Z3_INTERFACE}
         ,SOLVER_Z3          (*!< z3 solver. *)
         {$ENDIF}
+        {$IFDEF TRITON_BITWUZLA_INTERFACE}
+        ,SOLVER_BITWUZLA          (*!< bitwuzla solver. *)
+        {$ENDIF}
       );
-(*                         ---------End SolverEnums.hpp---------            *)
 
+      (*! The different kind of status *)
+      status_e = (
+        UNSAT = 0, (*!< UNSAT *)
+        SAT = 1,   (*!< SAT *)
+        TIMEOUT,   (*!< TIMEOUT *)
+        OUTOFMEM,  (*!< MEMORY LIMIT REACHED *)
+        UNKNOWN    (*!< UNKNOWN *)
+      );
+      pstatus_e = ^status_e;
+(*                         ---------End SolverEnums.hpp---------            *)
 
 (*                         ---------SymbolicExpression.hpp---------            *)
       //! Type of symbolic expressions.
@@ -267,76 +275,76 @@ type
         MEMORY_VARIABLE,       //!< Variable assigned to a memory.
         REGISTER_VARIABLE,     //!< Variable assigned to a register.
        UNDEFINED_VARIABLE);   //!< Undefined assignment.
-
 (*                         ---------End SymbolicVariable.hpp---------            *)
-
 (*                         ---------AstEnum.hpp---------            *)
      //! All types of representation mode.
      Rap_mode_e = (
         SMT_REPRESENTATION,     ///*!< SMT representation */
         PYTHON_REPRESENTATION,  ///*!< Python representation */
         LAST_REPRESENTATION);   ///*!< Must be the last item */
-
     ///*! Enumerates all types of node. Must be prime numbers. */
     ast_e = (
-      INVALID_NODE = 0,               //*!< Invalid node */
-      ANY_NODE = 0,                   //*!< Any node */
-      ASSERT_NODE = 3,                //*!< (assert x) */
-      BVADD_NODE = 5,                 //*!< (bvadd x y) */
-      BVAND_NODE = 7,                 //*!< (bvand x y) */
-      BVASHR_NODE = 12,               //*!< (bvashr x y) */
-      BVLSHR_NODE = 17,               //*!< (bvlshr x y) */
-      BVMUL_NODE = 19,                //*!< (bvmul x y) */
-      BVNAND_NODE = 23,               //*!< (bvnand x y) */
-      BVNEG_NODE = 29,                //*!< (bvneg x) */
-      BVNOR_NODE = 31,                //*!< (bvnor x y) */
-      BVNOT_NODE = 37,                //*!< (bvnot x) */
-      BVOR_NODE = 41,                 //*!< (bvor x y) */
-      BVROL_NODE = 43,                //*!< ((_ rotate_left x) y) */
-      BVROR_NODE = 47,                //*!< ((_ rotate_right x) y) */
-      BVSDIV_NODE = 53,               //*!< (bvsdiv x y) */
-      BVSGE_NODE = 59,                //*!< (bvsge x y) */
-      BVSGT_NODE = 61,                //*!< (bvsgt x y) */
-      BVSHL_NODE = 67,                //*!< (bvshl x y) */
-      BVSLE_NODE = 71,                //*!< (bvsle x y) */
-      BVSLT_NODE = 73,                //*!< (bvslt x y) */
-      BVSMOD_NODE = 79,               //*!< (bvsmod x y) */
-      BVSREM_NODE = 83,               //*!< (bvsrem x y) */
-      BVSUB_NODE = 89,                //*!< (bvsub x y) */
-      BVUDIV_NODE = 97,               //*!< (bvudiv x y) */
-      BVUGE_NODE = 101,               //*!< (bvuge x y) */
-      BVUGT_NODE = 103,               //*!< (bvugt x y) */
-      BVULE_NODE = 107,               //*!< (bvule x y) */
-      BVULT_NODE = 109,               //*!< (bvult x y) */
-      BVUREM_NODE = 113,              //*!< (bvurem x y) */
-      BVXNOR_NODE = 127,              //*!< (bvxnor x y) */
-      BVXOR_NODE = 131,               //*!< (bvxor x y) */
-      BV_NODE = 137,                  //*!< (_ bvx y) */
-      COMPOUND_NODE = 139,            //*!< A compound of nodes */
-      CONCAT_NODE = 149,              //*!< (concat x y z ...) */
-      DECLARE_NODE = 151,             //*!< (declare-fun <var_name> () (_ BitVec <var_size>)) */
-      DISTINCT_NODE = 157,            //*!< (distinct x y) */
-      EQUAL_NODE = 163,               //*!< (= x y) */
-      EXTRACT_NODE = 167,             //*!< ((_ extract x y) z) */
-      FORALL_NODE = 173,              //*!< (forall ((x (_ BitVec <size>)), ...) body) */
-      IFF_NODE = 179,                 //*!< (iff x y) */
-      INTEGER_NODE = 181,             //*!< Integer node */
-      ITE_NODE = 191,                 //*!< (ite x y z) */
-      LAND_NODE = 193,                //*!< (and x y) */
-      LET_NODE = 197,                 //*!< (let ((x y)) z) */
-      LNOT_NODE = 199,                //*!< (and x y) */
-      LOR_NODE = 211,                 //*!< (or x y) */
-      LXOR_NODE = 223,                //*!< (xor x y) */
-      REFERENCE_NODE = 227,           //*!< Reference node */
-      STRING_NODE = 229,              //*!< String node */
-      SX_NODE = 233,                  //*!< ((_ sign_extend x) y) */
-      VARIABLE_NODE = 239,            //*!< Variable node */
-      ZX_NODE = 241);                 //*!< ((_ zero_extend x) y) */
-
+      INVALID_NODE = 0,               (*!< Invalid node *)
+      ANY_NODE = 0,                   (*!< Any node *)
+      ASSERT_NODE = 3,                (*!< (assert x) *)
+      BSWAP_NODE = 5,                 (*!< (bswap x) *)
+      BVADD_NODE = 7,                 (*!< (bvadd x y) *)
+      BVAND_NODE = 13,                (*!< (bvand x y) *)
+      BVASHR_NODE = 17,               (*!< (bvashr x y) *)
+      BVLSHR_NODE = 19,               (*!< (bvlshr x y) *)
+      BVMUL_NODE = 23,                (*!< (bvmul x y) *)
+      BVNAND_NODE = 29,               (*!< (bvnand x y) *)
+      BVNEG_NODE = 31,                (*!< (bvneg x) *)
+      BVNOR_NODE = 37,                (*!< (bvnor x y) *)
+      BVNOT_NODE = 41,                (*!< (bvnot x) *)
+      BVOR_NODE = 43,                 (*!< (bvor x y) *)
+      BVROL_NODE = 47,                (*!< ((_ rotate_left x) y) *)
+      BVROR_NODE = 53,                (*!< ((_ rotate_right x) y) *)
+      BVSDIV_NODE = 59,               (*!< (bvsdiv x y) *)
+      BVSGE_NODE = 61,                (*!< (bvsge x y) *)
+      BVSGT_NODE = 67,                (*!< (bvsgt x y) *)
+      BVSHL_NODE = 71,                (*!< (bvshl x y) *)
+      BVSLE_NODE = 73,                (*!< (bvsle x y) *)
+      BVSLT_NODE = 79,                (*!< (bvslt x y) *)
+      BVSMOD_NODE = 83,               (*!< (bvsmod x y) *)
+      BVSREM_NODE = 89,               (*!< (bvsrem x y) *)
+      BVSUB_NODE = 97,                (*!< (bvsub x y) *)
+      BVUDIV_NODE = 101,              (*!< (bvudiv x y) *)
+      BVUGE_NODE = 103,               (*!< (bvuge x y) *)
+      BVUGT_NODE = 107,               (*!< (bvugt x y) *)
+      BVULE_NODE = 109,               (*!< (bvule x y) *)
+      BVULT_NODE = 113,               (*!< (bvult x y) *)
+      BVUREM_NODE = 127,              (*!< (bvurem x y) *)
+      BVXNOR_NODE = 131,              (*!< (bvxnor x y) *)
+      BVXOR_NODE = 137,               (*!< (bvxor x y) *)
+      BV_NODE = 139,                  (*!< (_ bvx y) *)
+      COMPOUND_NODE = 149,            (*!< A compound of nodes *)
+      CONCAT_NODE = 151,              (*!< (concat x y z ...) *)
+      DECLARE_NODE = 157,             (*!< (declare-fun <var_name> () (_ BitVec <var_size>)) *)
+      DISTINCT_NODE = 163,            (*!< (distinct x y) *)
+      EQUAL_NODE = 167,               (*!< (= x y) *)
+      EXTRACT_NODE = 173,             (*!< ((_ extract x y) z) *)
+      FORALL_NODE = 179,              (*!< (forall ((x (_ BitVec <size>)), ...) body) *)
+      IFF_NODE = 181,                 (*!< (iff x y) *)
+      INTEGER_NODE = 191,             (*!< Integer node *)
+      ITE_NODE = 193,                 (*!< (ite x y z) *)
+      LAND_NODE = 197,                (*!< (and x y) *)
+      LET_NODE = 199,                 (*!< (let ((x y)) z) *)
+      LNOT_NODE = 211,                (*!< (and x y) *)
+      LOR_NODE = 223,                 (*!< (or x y) *)
+      LXOR_NODE = 227,                (*!< (xor x y) *)
+      REFERENCE_NODE = 229,           (*!< Reference node *)
+      STRING_NODE = 233,              (*!< String node *)
+      SX_NODE = 239,                  (*!< ((_ sign_extend x) y) *)
+      VARIABLE_NODE = 241,            (*!< Variable node *)
+      ZX_NODE = 251,                  (*!< ((_ zero_extend x) y) *)
+      ARRAY_NODE = 257,               (*!< (Array (_ BitVec addrSize) (_ BitVec 8)) *)
+      SELECT_NODE = 263,              (*!< (select array index) *)
+      STORE_NODE = 269);              (*!< (store array index expr) *)
 
 (*                     ---------End AstEnum.hpp---------            *)
-
-HandleApi           = Pointer;   //triton::API
+HandleContext       = Pointer;   //triton::Context
+HandleSnapshot      = Pointer;   //Snapshot
 HandleBV            = Pointer;   //triton::arch::BitsVector
 HandleCpuInterface  = Pointer;   //triton::arch::CpuInterface
 HandleOperandWrapper= Pointer;   //triton::arch::OperandWrapper
@@ -348,53 +356,52 @@ HandleAstContext    = Pointer;   //triton::ast::AstContext
 HandleSolverModel   = pointer;   //triton::engines::solver::SolverModel
 HandleTaintEngine   = Pointer;   //triton::engines::taint::TaintEngine
 HandlePathConstraint= Pointer;   //triton::engines::symbolic::PathConstraint
+HandleSynthesisResult= Pointer;  //triton::engines::synthesis::SynthesisResult
+HandleBasicBlock     = Pointer;  //triton::arch::BasicBlock
 
+AHandleInstruz = array of HandleInstruz;
+
+HLLVMToTriton       = Pointer;   //typedef triton::ast::LLVMToTriton
 
 HandleSymbolicEngine           = Pointer;  //triton::engines::symbolic::SymbolicEngine
 HandleSharedSymbolicExpression = Pointer;  //triton::engines::symbolic::SharedSymbolicExpression
 HandleSharedSymbolicVariable   = Pointer;  //triton::engines::symbolic::SharedSymbolicVariable
-
 HandleAbstractNode  = Pointer;   //std::shared_ptr<triton::ast::AbstractNode>
 
-PAddrSolver = ^AddrSolver;
-AddrSolver = record { //std::map<triton::uint32, triton::engines::solver::SolverModel>  }
+PAddrSolver = ^AddrSolver;
+
+AddrSolver = record { //std::map<triton::uint32, triton::engines::solver::SolverModel>  }
   numEle: uint32;
 	id    : uint32;
 	Model : HandleSolverModel;
 end;
 AAddrSolver = array of PAddrSolver;
 PListSolver = ^AAddrSolver;
-
 PIdSymExpr = ^IdSymExpr;
 IdSymExpr = record { //std::map<triton::usize, triton::engines::symbolic::SharedSymbolicExpression> }
 	id      : usize;
 	SymExpr : HandleSharedSymbolicExpression ;
 end;
-
 PIdSymVar = ^IdSymVar;
 IdSymVar = record //std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable>
 	id     : usize;
 	SymVar : HandleSharedSymbolicVariable;
 end;
-
 PRegSymE = ^RegSymE;
 RegSymE = record  //std::map<triton::arch::register_e, triton::engines::symbolic::SharedSymbolicExpression>
 	regId  : register_e;
 	RegSym : HandleSharedSymbolicExpression;
 end;
-
 PMemSymE = ^MemSymE;
 MemSymE = record { //std::map<triton::uint64, triton::engines::symbolic::SharedSymbolicExpression> }
 	mem    : uint64;
 	MemSym : HandleSharedSymbolicExpression;
 end;
-
 PRegIdReg = ^RegIdReg;
 RegIdReg = record { //std::map<triton::uint64, triton::engines::symbolic::SharedSymbolicExpression> }
 	regId  : register_e;
 	Reg    : HandleReg;
 end;
-
 PBranch = ^Branch;
 Branch = record  //std::vector<std::tuple<bool, triton::uint64, triton::uint64, HandleAbstractNode>>
 	taken  : Boolean;
@@ -404,10 +411,9 @@ Branch = record  //std::vector<std::tuple<bool, triton::uint64, triton::uint64, 
 end;
 ABranch = array of Branch;
 PHandlePathConstraint = ^HandlePathConstraint;
-
 PReg          = ^HandleReg;
 PSimbolicExpr = ^HandleSharedSymbolicExpression;
-
+PHandleInstruz= ^AHandleInstruz;
 (**********************************************************************)
 
 implementation

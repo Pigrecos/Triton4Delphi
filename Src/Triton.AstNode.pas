@@ -48,7 +48,8 @@ type
       function GreaterThan         (n1: AbstractNode): AbstractNode;
       //
       function  IsNodeAssigned: Boolean;
-      function  GetHash(deep: UInt32): Uint64;
+      function  GetHash: Uint64;
+      function  GetLevel: UInt32;
       function  equalTo(other: AbstractNode): Boolean ;
       function  evaluate: uint64 ;
       procedure removeParent(p: AbstractNode);
@@ -57,14 +58,12 @@ type
       procedure setBitvectorSize(size: uint32);
       procedure addChild(child: AbstractNode);
       procedure setChild(index: uint32; child: AbstractNode);
-      function  SearchNodes(match : ast_e = ANY_NODE):TArray<AbstractNode>;
       // solo per IntegerNode
       function  getInteger: UInt64;
       // solo per RefereceNode
 	    function  getSymbolicExpression: HandleSharedSymbolicExpression;
       // solo per VariableNode
 	    function  getSymbolicVariable: HandleSharedSymbolicVariable;
-      function  unroll   : AbstractNode;
       function  duplicate: AbstractNode;
       function  str: string;
       procedure init ;
@@ -111,6 +110,8 @@ type
       class Operator RightShift(n1,n2: AbstractNode): AbstractNode;
       class Operator LogicalNot(n1   : AbstractNode): AbstractNode;
       class Operator Negative  (n1   : AbstractNode): AbstractNode;
+      class Operator Equal     (n1: AbstractNode; n2: UInt64): AbstractNode;
+      class Operator NotEqual  (n1: AbstractNode; n2: UInt64): AbstractNode;
 
     property  Childrens     : TArray<AbstractNode> read getChildren;
     property  Parents       : TArray<AbstractNode> read getParents;
@@ -121,6 +122,7 @@ type
     property  Signed        : Boolean              read FisSigned;
     property  Symbolized    : Boolean              read FisSymbolized;
     property  Logical       : Boolean              read FisLogical;
+    property  Level         : UInt32               read GetLevel;
 
   end;
 
@@ -167,16 +169,14 @@ type
       procedure Node_str(Handle: HandleAbstractNode;var sStr: PAnsiChar); cdecl;  external Triton_dll Name 'Node_str';
       //! Init stuffs like size and eval.
       procedure  Node_init(Handle: HandleAbstractNode) ; cdecl;  external Triton_dll Name 'Node_init';
-      //! AST C++ API - Unrolls the SSA form of a given AST.
-      function Node_unroll(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_unroll';
-      //! Returns a deque of collected matched nodes via a depth-first pre order traversal.
-	    function Node_search(node: HandleAbstractNode; var outArray: PAHNode; match : ast_e = ANY_NODE): UInt32; cdecl;  external Triton_dll Name 'Node_search';
       //! Gets a duplicate.
       function Node_duplicate(node: HandleAbstractNode): HandleAbstractNode; cdecl;  external Triton_dll Name 'Node_duplicate';
       // !Displays the node in ast representation.
       procedure AstToStr(hnode: HandleAbstractNode; var sOut: PAnsiChar); cdecl;  external Triton_dll Name 'AstToStr';
       //! Returns the has of the tree. The hash is computed recursively on the whole tree.
-	    function Node_hash(node: HandleAbstractNode; deep: UInt32): uint64; cdecl;  external Triton_dll Name 'Node_hash';
+	    function Node_hash(node: HandleAbstractNode): uint64; cdecl;  external Triton_dll Name 'Node_hash';
+      //! Returns the deep level of the tree.
+      function Node_Level(node: HandleAbstractNode): UInt32; cdecl;  external Triton_dll Name 'Node_Level';
       // !descendig node particular procedure //todo support uint512
 	    function  NodeInteger_getInteger(node: HandleAbstractNode): UInt64; cdecl;  external Triton_dll Name 'NodeInteger_getInteger';
 	    function  NodeRef_getSymbolicExpression(node: HandleAbstractNode): HandleSharedSymbolicExpression; cdecl;  external Triton_dll Name 'NodeRef_getSymbolicExpression';
@@ -271,9 +271,14 @@ begin
      Result := Node_getContext(FHandleAbstractNode)
 end;
 
-function AbstractNode.GetHash(deep: UInt32): Uint64;
+function AbstractNode.GetHash: Uint64;
 begin
-    Result := Node_hash(FHandleAbstractNode,deep);
+    Result := Node_hash(FHandleAbstractNode);
+end;
+
+function AbstractNode.GetLevel: UInt32;
+begin
+    Result := Node_Level(FHandleAbstractNode);
 end;
 
 function AbstractNode.getType: ast_e;
@@ -454,23 +459,6 @@ begin
     Result := res;
 end;
 
-function AbstractNode.SearchNodes(match: ast_e): TArray<AbstractNode>;
-var
-  n,i     : Integer;
-  outArray: PAHNode ;
-  res     : TArray<AbstractNode>;
-begin
-    outArray := nil;
-    n :=  Node_search(FHandleAbstractNode,outArray,match);
-
-    res := [];
-    for i := 0 to n - 1 do
-       res := res + [ AbstractNode(outArray[i]) ] ;
-
-    Result := res;
-
-end;
-
 class operator AbstractNode.LogicalNot(n1: AbstractNode): AbstractNode;
 var
   res : AbstractNode;
@@ -489,6 +477,20 @@ begin
      res :=  AstContext(n1.Context).bvneg(n1);
 
     Result := res;
+end;
+
+class operator AbstractNode.NotEqual(n1: AbstractNode; n2: UInt64): AbstractNode;
+begin
+    var size := n1.BitvectorSize;
+    var ast : AstContext := n1.getContext;
+    Result := ast.lnot(n1.Equal(ast.bv(n2,size))) ;
+end;
+
+class operator AbstractNode.Equal(n1: AbstractNode; n2: UInt64): AbstractNode;
+begin
+    var size := n1.BitvectorSize;
+    var ast : AstContext := n1.getContext;
+    Result := n1.Equal(ast.bv(n2,size)) ;
 end;
 
 function  AbstractNode.Equal(n1: AbstractNode): AbstractNode;
@@ -600,11 +602,6 @@ var
 begin
     AstToStr(FHandleAbstractNode,p);
     Result := string(p);
-end;
-
-function AbstractNode.unroll: AbstractNode;
-begin
-    Result := AbstractNode (Node_unroll(FHandleAbstractNode));
 end;
 
 function AbstractNode.duplicate: AbstractNode;

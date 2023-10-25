@@ -45,10 +45,10 @@ implementation
             UntMain;
 
 var
- Triton : TApi;
+ Triton : TTritonCtx;
 
 // a ^ a -> a = 0
-function xor1(aApi : HandleApi; sNode: HandleAbstractNode): HandleAbstractNode;cdecl;
+function xor1(aApi : HandleContext; sNode: HandleAbstractNode): HandleAbstractNode;cdecl;
 var
   node : AbstractNode;
 begin
@@ -64,7 +64,7 @@ begin
 end;
 
 // ((a & ~b) | (~a & b)) -> (a ^ b)
-function xor2(aApi : HandleApi; sNode: HandleAbstractNode): HandleAbstractNode;cdecl;
+function xor2(aApi : HandleContext; sNode: HandleAbstractNode): HandleAbstractNode;cdecl;
 var
   node   : AbstractNode;
   c1,c2  : AbstractNode;

@@ -92,7 +92,10 @@ type
      Prefixed      : Boolean;      //! True if the instruction has a prefix (mainly for X86).
 
      procedure Create; overload;
+     procedure Create(addr: UInt64; opcode: TOpcode); overload;
      procedure Create(opcode: TOpcode;opSize: Uint32); overload;
+     procedure Create(opcode: array of Byte); overload;
+     function  CreateFrom(opcode: array of Byte): Istruzione;
      procedure Create(other: Istruzione); overload;
      procedure Free;
      procedure Reload;
@@ -116,6 +119,7 @@ type
      procedure removeUndefinedRegister(reg: Registro);
      procedure setSize(size: UInt32);
      procedure setType(tipo: UInt32);
+     function  getType: instruction_e;
      procedure setPrefix(prefix: prefix_e);
      procedure setCodeCondition(codeCondition: condition_e);
      procedure setDisassembly(str: PAnsiChar);
@@ -126,6 +130,7 @@ type
      procedure setBranch(flag: Boolean);
      procedure setControlFlow(flag: Boolean);
      procedure setConditionTaken(flag: Boolean);
+     function  isSymbolized: Boolean;
 
      procedure clear;
      function  ToStr: string;
@@ -237,6 +242,9 @@ type
         function IgetsymbolicExpressions(hIstr: HandleInstruz; var outArray: PSymbolicEx): uint32;cdecl;  external Triton_dll Name 'IgetsymbolicExpressions';
         //!  Get operands.
         function IGetOperand(hIstr: HandleInstruz; outArray: POperand): uint32;cdecl;  external Triton_dll Name 'IGetOperand';
+        //! Returns true if at least one of its expressions contains a symbolic variable.
+        function IisSymbolized(hIstr: HandleInstruz): Boolean;cdecl;  external Triton_dll Name 'IisSymbolized';
+
 implementation
    uses  Triton.Core;
 
@@ -370,6 +378,11 @@ begin
     Result := ret;
 end;
 
+function Istruzione.getType: instruction_e;
+begin
+    Result := instruction_e(tipo)
+end;
+
 function Istruzione.getOperands: TArray<OpWrapper>;
 var
   n,i       : Integer;
@@ -449,6 +462,36 @@ begin
     symbolicExpressions := nil;}
 end;
 
+function Istruzione.CreateFrom(opcode: array of Byte): Istruzione;
+begin
+    ZeroMemory(@self,SizeOf(Istruzione));
+    FHIstruz := IInstructionOP(@opcode[0],Length(opcode));
+
+    GetInternalData ;
+
+    Result := Self;
+end;
+
+procedure Istruzione.Create(opcode: array of Byte);
+begin
+    ZeroMemory(@self,SizeOf(Istruzione));
+    FHIstruz := IInstructionOP(@opcode[0],Length(opcode));
+
+    GetInternalData ;
+end;
+
+procedure Istruzione.Create(addr: UInt64; opcode: TOpcode);
+begin
+    ZeroMemory(@self,SizeOf(Istruzione));
+    var size : UInt32 := Length(opcode) ;
+    FHIstruz := IInstructionOP(@opcode[0],size);
+
+    setAddress(addr);
+
+    GetInternalData;
+end;
+
+
 procedure Istruzione.Free;
 begin
     IDelete(FHIstruz);
@@ -496,6 +539,11 @@ end;
 function Istruzione.isReadFrom(target: OpWrapper): Boolean;
 begin
      Result := IisReadFrom(FHIstruz,HandleOperandWrapper(target))
+end;
+
+function Istruzione.isSymbolized: Boolean;
+begin
+    Result := IisSymbolized(FHIstruz);
 end;
 
 function Istruzione.isWriteTo(target: OpWrapper): Boolean;

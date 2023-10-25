@@ -27,7 +27,12 @@ uses
   Callback in 'Callback.pas',
   Vcl.Themes,
   Vcl.Styles,
-  Simplification in 'Simplification.pas';
+  Simplification in 'Simplification.pas',
+  vmp_attach in 'vmp_attach.pas',
+  Triton.SyntResult in '..\Triton.SyntResult.pas',
+  Triton.llvmToTriton in '..\Triton.llvmToTriton.pas',
+  Triton.BasicBlock in '..\Triton.BasicBlock.pas',
+  BasicBlock in 'BasicBlock.pas';
 
 {$R *.res}
 

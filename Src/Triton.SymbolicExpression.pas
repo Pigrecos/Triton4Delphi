@@ -47,7 +47,7 @@ type
       procedure setType(const Value: expression_e);
       function getId: usize;
       function Update: Boolean;
-    function GetIsTanted: Boolean;
+      function GetIsTanted: Boolean;
     public
       procedure Create(node: AbstractNode; id: usize; tipo: expression_e; comment: PAnsiChar = nil); overload;
       procedure Create(other: symbolicExp);overload;
