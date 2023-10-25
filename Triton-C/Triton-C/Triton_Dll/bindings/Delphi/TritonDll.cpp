@@ -13,15 +13,19 @@
 #include <utility>
 
 #include <triton/register.hpp>
-#include <triton/api.hpp>
+#include <triton/Context.hpp>
+#include <triton/astEnums.hpp>
 #include <triton/ast.hpp>
 #include <triton/astContext.hpp>
 #include <triton/astRepresentation.hpp>
 #include <triton/exceptions.hpp>
 #include <triton/symbolicExpression.hpp>
 #include <triton/symbolicVariable.hpp>
+#include <triton/callbacksEnums.hpp>
 
-#include <triton/TritonDll.h>
+#include <TritonDll.h>
+
+#define strdup _strdup
 
 
 /* Architecture API ============================================================================== */
@@ -149,38 +153,115 @@ _Istruz RefIstruzToIstruz(HandleInstruz HOpW)
 
 };
 
+Snapshot::Snapshot(Context* Api, bool Is64Bit) {
+  this->SnapshotTaintEngine = nullptr;
+  this->SnapshotSymEngine = nullptr;
+  this->AstCtx = nullptr;
+  this->Cpu_x8664 = nullptr;
+  this->Cpu_x86 = nullptr;
+  this->Api = Api;
+  this->Is64Bit = Is64Bit;
+}
+
+Snapshot::~Snapshot() {}
+
+void Snapshot::takeSnapshot() {
+  // Snapshot the symbolic engine
+  this->SnapshotSymEngine = new SymbolicEngine(*this->Api->getSymbolicEngine());
+  // Snapshot the taint engine
+  this->SnapshotTaintEngine = new TaintEngine(*this->Api->getTaintEngine());
+  // Snapshot the AST context
+  this->AstCtx = new AstContext(*this->Api->getAstContext());
+  // Snapshot the CPU context
+  if (this->Is64Bit) {
+    this->Cpu_x8664 = new x8664Cpu(*dynamic_cast<x8664Cpu*>(this->Api->getCpuInstance()));
+  }
+  else {
+    this->Cpu_x86 = new x86Cpu(*dynamic_cast<x86Cpu*>(this->Api->getCpuInstance()));
+  }
+}
+
+void Snapshot::restoreSnapshot() {
+  // Restore the symbolic engine
+  *this->Api->getSymbolicEngine() = *this->SnapshotSymEngine;
+  // Restore the taint engine
+  *this->Api->getTaintEngine() = *this->SnapshotTaintEngine;
+  // Restore the AST context
+  *this->Api->getAstContext() = *this->AstCtx;
+  // Restore the CPU context
+  if (this->Is64Bit) {
+    *dynamic_cast<x8664Cpu*>(this->Api->getCpuInstance()) = *this->Cpu_x8664;
+  }
+  else {
+    *dynamic_cast<x86Cpu*>(this->Api->getCpuInstance()) = *this->Cpu_x86;
+  }
+}
+
+void Snapshot::resetEngine(void) {
+  delete this->SnapshotSymEngine;
+  this->SnapshotSymEngine = nullptr;
+  delete this->SnapshotTaintEngine;
+  this->SnapshotTaintEngine = nullptr;
+}
+
+/* Snapshot =======================================================================================*/
+
+HandleSnapshot CreaSnapshot(HandleContext Handle, bool Is64Bit)
+{
+  return new Snapshot(Handle, Is64Bit);
+}
+
+void DeleteSnapshot(HandleSnapshot Handle) 
+{
+  delete Handle;
+}
+
+void snap_resetEngine(HandleSnapshot Handle) 
+{
+  Handle->resetEngine();
+}
+
+void snap_restoreSnapshot(HandleSnapshot Handle) 
+{
+  Handle->restoreSnapshot();
+}
+
+void snap_takeSnapshot(HandleSnapshot Handle) 
+{
+  Handle->takeSnapshot();
+}
 
 /* Architecture API ============================================================================== */
 
 /* Callbacs Procedure         -- very bad implementation but it works ...:):) */
 
-HandleAbstractNode(*cs)(HandleApi, HandleAbstractNode);
-HandleAbstractNode(*cs1)(HandleApi, HandleAbstractNode);
-HandleAbstractNode(*cs2)(HandleApi, HandleAbstractNode);
+HandleAbstractNode(*cs)(HandleContext, HandleAbstractNode);
+HandleAbstractNode(*cs1)(HandleContext, HandleAbstractNode);
+HandleAbstractNode(*cs2)(HandleContext, HandleAbstractNode);
 
-void(*cSRVal)  (HandleApi, HandleReg, uint64);
-void(*cSRVal1) (HandleApi, HandleReg, uint64);
-void(*cSRVal2) (HandleApi, HandleReg, uint64);
+void(*cSRVal)  (HandleContext, HandleReg, uint64);
+void(*cSRVal1) (HandleContext, HandleReg, uint64);
+void(*cSRVal2) (HandleContext, HandleReg, uint64);
 
-void(*cSMVal)  (HandleApi, HandleMemAcc, uint64);
-void(*cSMVal1) (HandleApi, HandleMemAcc, uint64);
-void(*cSMVal2) (HandleApi, HandleMemAcc, uint64);
+void(*cSMVal)  (HandleContext, HandleMemAcc, uint64);
+void(*cSMVal1) (HandleContext, HandleMemAcc, uint64);
+void(*cSMVal2) (HandleContext, HandleMemAcc, uint64);
 
-void(*cGRVal)  (HandleApi, HandleReg);
-void(*cGRVal1) (HandleApi, HandleReg);
-void(*cGRVal2) (HandleApi, HandleReg);
+void(*cGRVal)  (HandleContext, HandleReg);
+void(*cGRVal1) (HandleContext, HandleReg);
+void(*cGRVal2) (HandleContext, HandleReg);
 
-void(*cGMVal)  (HandleApi, HandleMemAcc);
-void(*cGMVal1) (HandleApi, HandleMemAcc);
-void(*cGMVal2) (HandleApi, HandleMemAcc);
+void(*cGMVal)  (HandleContext, HandleMemAcc);
+void(*cGMVal1) (HandleContext, HandleMemAcc);
+void(*cGMVal2) (HandleContext, HandleMemAcc);
 
-HandleApi  CreateApi(void)
+HandleContext  CreateApi(void)
 {
-	return new triton::API();
+	return new triton::Context();
 };
 
 
-void  DeleteApi(HandleApi Handle)
+void  DeleteApi(HandleContext Handle)
 {
 	delete Handle;
 	cs = NULL;
@@ -204,64 +285,64 @@ void  DeleteApi(HandleApi Handle)
 	cGMVal2 = NULL;
 }
 
-void  setArchitecture(HandleApi Handle, triton::arch::architecture_e arch)
+void  setArchitecture(HandleContext Handle, triton::arch::architecture_e arch)
 {
 	Handle->setArchitecture(arch);
 }
 
-triton::arch::architecture_e  GetArchitecture(HandleApi Handle)
+triton::arch::architecture_e  GetArchitecture(HandleContext Handle)
 {
 	return Handle->getArchitecture();
 }
 
-bool  isArchitectureValid(HandleApi Handle)
+bool  isArchitectureValid(HandleContext Handle)
 {
 	return Handle->isArchitectureValid();
 }
 
-void  clearArchitecture(HandleApi Handle)
+void  clearArchitecture(HandleContext Handle)
 {
 	Handle->clearArchitecture();
 }
 
-triton::arch::endianness_e  getEndianness(HandleApi Handle)
+triton::arch::endianness_e  getEndianness(HandleContext Handle)
 {
 	return  Handle->getEndianness();
 }
 
-HandleCpuInterface  getCpuInstance(HandleApi Handle)
+HandleCpuInterface  getCpuInstance(HandleContext Handle)
 {
 	return  Handle->getCpuInstance();
 }
 
-bool  isFlag(HandleApi Handle, triton::arch::register_e regId)
+bool  isFlag(HandleContext Handle, triton::arch::register_e regId)
 {
 	return  Handle->isFlag(regId);
 }
 
-bool  isFlagR(HandleApi Handle, HandleReg reg)
+bool  isFlagR(HandleContext Handle, HandleReg reg)
 {
 	return  Handle->isFlag(*reg);
 }
 
-bool  isRegister(HandleApi Handle, triton::arch::register_e regId)
+bool  isRegister(HandleContext Handle, triton::arch::register_e regId)
 {
 	return  Handle->isRegister(regId);
 }
 
-bool  isRegisterR(HandleApi Handle, HandleReg reg)
+bool  isRegisterR(HandleContext Handle, HandleReg reg)
 {
 	return Handle->isRegister(*reg);
 }
 
-HandleReg  getRegister(HandleApi Handle, register_e id)
+HandleReg  getRegister(HandleContext Handle, register_e id)
 {
 
 	return new Register(Handle->getRegister(id));;
 
 }
 
-HandleReg  getParentRegisterR(HandleApi Handle, HandleReg reg)
+HandleReg  getParentRegisterR(HandleContext Handle, HandleReg reg)
 {
 
 	Register r = Handle->getParentRegister(*reg);
@@ -269,7 +350,7 @@ HandleReg  getParentRegisterR(HandleApi Handle, HandleReg reg)
 
 }
 
-HandleReg  getParentRegister(HandleApi Handle, triton::arch::register_e id)
+HandleReg  getParentRegister(HandleContext Handle, triton::arch::register_e id)
 {
 
 	Register r = Handle->getParentRegister(id);
@@ -277,35 +358,35 @@ HandleReg  getParentRegister(HandleApi Handle, triton::arch::register_e id)
 
 }
 
-bool  isRegisterValid(HandleApi Handle, triton::arch::register_e id)
+bool  isRegisterValid(HandleContext Handle, triton::arch::register_e id)
 {
 
 	return Handle->isRegisterValid(id);
 
 }
 
-bool  isRegisterValidR(HandleApi Handle, HandleReg reg)
+bool  isRegisterValidR(HandleContext Handle, HandleReg reg)
 {
 
 	return Handle->isRegisterValid(*reg);
 
 }
 
-uint32  getGprBitSize(HandleApi Handle)
+uint32  getGprBitSize(HandleContext Handle)
 {
 
 	return Handle->getGprBitSize();
 
 }
 
-triton::uint32  getGprSize(HandleApi Handle)
+triton::uint32  getGprSize(HandleContext Handle)
 {
 
 	return Handle->getGprSize();
 
 }
 
-triton::uint32  getNumberOfRegisters(HandleApi Handle)
+triton::uint32  getNumberOfRegisters(HandleContext Handle)
 {
 
 	return Handle->getNumberOfRegisters();
@@ -313,19 +394,19 @@ triton::uint32  getNumberOfRegisters(HandleApi Handle)
 }
 
 //! [**architecture api**] - Returns the concrete value of a memory cell.
-triton::uint8   getConcreteMemoryValueByte(HandleApi Handle, triton::uint64 addr, bool execCallbacks )
+triton::uint8   getConcreteMemoryValueByte(HandleContext Handle, triton::uint64 addr, bool execCallbacks )
 {
 	return Handle->getConcreteMemoryValue(addr, execCallbacks);
 }
 
 //! [**architecture api**] - Returns the concrete value of memory cells.// not support 512
-uint64   getConcreteMemoryValue(HandleApi Handle, HandleMemAcc mem, bool execCallbacks )
+uint64   getConcreteMemoryValue(HandleContext Handle, HandleMemAcc mem, bool execCallbacks )
 {
 	return (uint64)Handle->getConcreteMemoryValue(*mem, execCallbacks);
 }
 
 //! [**architecture api**] - Returns the concrete value of a memory area.
-retArray   getConcreteMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr, triton::usize size, bool execCallbacks )
+retArray   getConcreteMemoryAreaValue(HandleContext Handle, triton::uint64 baseAddr, triton::usize size, bool execCallbacks )
 {	
 	std::vector<triton::uint8> v = Handle->getConcreteMemoryAreaValue(baseAddr, size, execCallbacks);
 
@@ -338,48 +419,53 @@ retArray   getConcreteMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr,
 }
 
 //! [**architecture api**] - Returns the concrete value of a register. // not support 512
-triton::uint64   getConcreteRegisterValue(HandleApi Handle, HandleReg reg, bool execCallbacks )
+triton::uint64   getConcreteRegisterValue(HandleContext Handle, HandleReg reg, bool execCallbacks )
 {
 	return (uint64)Handle->getConcreteRegisterValue(Register(*reg), execCallbacks);
 }
 
-void  setConcreteMemoryValueByte(HandleApi Handle, triton::uint64 addr, triton::uint8 value)
+void  setConcreteMemoryValueByte(HandleContext Handle, triton::uint64 addr, triton::uint8 value)
 {
 	Handle->setConcreteMemoryValue(addr, value);
 }
 
 // not support 512
-void  setConcreteMemoryValue(HandleApi Handle, HandleMemAcc mem, triton::uint64 value)
+void  setConcreteMemoryValue(HandleContext Handle, HandleMemAcc mem, triton::uint64 value)
 {
 	Handle->setConcreteMemoryValue(*mem, value);
 }
 
-void  setConcreteMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr, triton::uint8* area, triton::usize size)
+void  setConcreteMemoryAreaValue(HandleContext Handle, triton::uint64 baseAddr, triton::uint8* area, triton::usize size)
 {
 	Handle->setConcreteMemoryAreaValue(baseAddr, area, size);
 }
 
 // not support 512
-void  setConcreteRegisterValue(HandleApi Handle, HandleReg reg, triton::uint64 value)
+void  setConcreteRegisterValue(HandleContext Handle, HandleReg reg, triton::uint64 value)
 {
 	Handle->setConcreteRegisterValue(*reg, value);
 }
 
 //! [**architecture api**] - Returns true if the range `[baseAddr:size]` is mapped into the internal memory representation. \sa getConcreteMemoryValue() and getConcreteMemoryAreaValue().
-bool  isConcreteMemoryValueDefined(HandleApi Handle, triton::uint64 baseAddr, triton::usize size )
+bool  isConcreteMemoryValueDefined(HandleContext Handle, triton::uint64 baseAddr, triton::usize size )
 {
 	return Handle->isConcreteMemoryValueDefined(baseAddr, size);
 }
 
 //! [**architecture api**] - Removes the range `[baseAddr:size]` from the internal memory representation. \sa isMemoryMapped().
-void   clearConcreteMemoryValue(HandleApi Handle, triton::uint64 baseAddr, triton::usize size )
+void   clearConcreteMemoryValue(HandleContext Handle, triton::uint64 baseAddr, triton::usize size )
 {
 	Handle->clearConcreteMemoryValue(baseAddr, size);
 }
 
-void  disassembly(HandleApi Handle, HandleInstruz inst)
+void  disassembly(HandleContext Handle, HandleInstruz inst)
 {
 	Handle->disassembly(*inst);
+}
+
+void disassembly_BB(HandleContext Handle, HandleBasicBlock block, triton::uint64 addr)
+{
+  Handle->disassembly(*block, addr);
 }
 
 uint32 mapRegsToArray(std::unordered_map<triton::arch::register_e, const triton::arch::Register> mregs, RegIdReg **OutRegs)
@@ -420,7 +506,7 @@ uint32 mapRegsToArray(std::unordered_map<triton::arch::register_e, const triton:
 }
 
 //! [**architecture api**] - Returns all registers. \sa triton::arch::x86::register_e.
-uint32 getAllRegisters(HandleApi Handle, RegIdReg **Regs)
+uint32 getAllRegisters(HandleContext Handle, RegIdReg **Regs)
 {
 	std::unordered_map<triton::arch::register_e, const triton::arch::Register> s = Handle->getAllRegisters();
 	auto   n = mapRegsToArray(s, Regs);
@@ -429,7 +515,7 @@ uint32 getAllRegisters(HandleApi Handle, RegIdReg **Regs)
 }
 
 //! [**architecture api**] - Returns all parent registers. \sa triton::arch::x86::register_e.
-uint32 getParentRegisters(HandleApi Handle, HandleReg*& outRegs)
+uint32 getParentRegisters(HandleContext Handle, HandleReg*& outRegs)
 {
 	std::set<const triton::arch::Register*> r = Handle->getParentRegisters();
 	size_t n = r.size();
@@ -453,24 +539,30 @@ uint32 getParentRegisters(HandleApi Handle, HandleReg*& outRegs)
 /* Processing API ================================================================================ */
 
 //! [**proccesing api**] - Processes an instruction and updates engines according to the instruction semantics. Returns true if the instruction is supported.
-bool   processing(HandleApi Handle, HandleInstruz inst)
+exception_e processing(HandleContext Handle, HandleInstruz inst)
 {
 	return Handle->processing(*inst);
 }
 
+//! [**proccesing api**] - Processes a block of instructions and updates engines according to instructions semantics. Returns `triton::arch::NO_FAULT` if succeed.
+exception_e processing_BB(HandleContext Handle, HandleBasicBlock block, triton::uint64 addr) 
+{
+  return  Handle->processing(*block, addr);
+}
+
 //! [**proccesing api**] - Initializes everything.
-void   initEngines(HandleApi Handle)
+void   initEngines(HandleContext Handle)
 {
 	Handle->initEngines();
 }
 
 //! [**proccesing api**] - Removes everything.
-void   removeEngines(HandleApi Handle)
+void   removeEngines(HandleContext Handle)
 {
 	Handle->removeEngines();
 }
 //! [**proccesing api**] - Resets everything.
-void  reset(HandleApi Handle)
+void  reset(HandleContext Handle)
 {
 	Handle->reset();
 }
@@ -479,13 +571,19 @@ void  reset(HandleApi Handle)
 /* IR API ======================================================================================== */
 
 //! [**IR builder api**] - Builds the instruction semantics. Returns true if the instruction is supported. You must define an architecture before. \sa processing().
-bool   buildSemantics(HandleApi Handle, HandleInstruz inst)
+exception_e buildSemantics(HandleContext Handle, HandleInstruz inst) 
 {
 	return Handle->buildSemantics(*inst);
 }
 
+//! [**IR builder api**] - Builds the instructions semantics of a block. Returns `triton::arch::NO_FAULT` if succeed.
+exception_e buildSemantics_BB(HandleContext Handle, HandleBasicBlock block)
+{
+  return Handle->buildSemantics(*block);
+}
+
 //! [**IR builder api**] - Returns the AST context. Used as AST builder.
-HandleAstContext   getAstContext(HandleApi Handle)
+HandleAstContext   getAstContext(HandleContext Handle)
 {
    HandleAstContext cc = new std::shared_ptr<triton::ast::AstContext>;
    *cc = Handle->getAstContext();
@@ -495,49 +593,49 @@ HandleAstContext   getAstContext(HandleApi Handle)
 
 /* AST Representation API ======================================================================== */
 
-triton::uint32 getAstRepresentationMode(HandleApi Handle)
+triton::uint32 getAstRepresentationMode(HandleContext Handle)
 {
 	return  Handle->getAstRepresentationMode();
 }
 
-void setAstRepresentationMode(HandleApi Handle,triton::uint32 mode)
+void setAstRepresentationMode(HandleContext Handle,triton::uint32 mode)
 {
-	Handle->setAstRepresentationMode(mode);
+	Handle->setAstRepresentationMode((triton::ast::representations::mode_e)mode);
 }
 
 /* Callbacks API ================================================================================= */
 
 /*addCallbackGetMem Callbacs Procedure         -- very bad implementation but it works ...:):) */
 
-void cbGetMem(triton::API& ctx, const triton::arch::MemoryAccess& mem)
+void cbGetMem(triton::Context& ctx, const triton::arch::MemoryAccess& mem)
 {
 	cGMVal(&ctx, HandleMemAcc(&mem));
 }
-void cbGetMem1(triton::API& ctx, const triton::arch::MemoryAccess& mem)
+void cbGetMem1(triton::Context& ctx, const triton::arch::MemoryAccess& mem)
 {
 	cGMVal1(&ctx, HandleMemAcc(&mem));
 }
-void cbGetMem2(triton::API& ctx, const triton::arch::MemoryAccess& mem)
+void cbGetMem2(triton::Context& ctx, const triton::arch::MemoryAccess& mem)
 {
 	cGMVal2(&ctx, HandleMemAcc(&mem));
 }
 
-void addCallbackGetMem(HandleApi Handle, cbGetMemVal cb)
+void addCallbackGetMem(HandleContext Handle, cbGetMemVal cb)
 {
 	if (cGMVal == NULL)
 	{
 		cGMVal = *cb;
-		Handle->addCallback(cbGetMem);
+		Handle->addCallback(callbacks::GET_CONCRETE_MEMORY_VALUE,cbGetMem);
 	}
 	else if (cGMVal1 == NULL)
 	{
 		cGMVal1 = *cb;
-		Handle->addCallback(cbGetMem1);
+		Handle->addCallback(callbacks::GET_CONCRETE_MEMORY_VALUE,cbGetMem1);
 	}
 	else if (cGMVal2 == NULL)
 	{
 		cGMVal2 = *cb;
-		Handle->addCallback(cbGetMem2);
+		Handle->addCallback(callbacks::GET_CONCRETE_MEMORY_VALUE,cbGetMem2);
 	}
 	else
 	{
@@ -547,35 +645,35 @@ void addCallbackGetMem(HandleApi Handle, cbGetMemVal cb)
 
 /*addCallbackGetReg Callbacs Procedure         -- very bad implementation but it works ...:):) */
 
-void cbGetReg(triton::API& ctx, const triton::arch::Register& reg)
+void cbGetReg(triton::Context& ctx, const triton::arch::Register& reg)
 {
 	cGRVal(&ctx, HandleReg(&reg));
 }
-void cbGetReg1(triton::API& ctx, const triton::arch::Register& reg)
+void cbGetReg1(triton::Context& ctx, const triton::arch::Register& reg)
 {
 	cGRVal1(&ctx, HandleReg(&reg));
 }
-void cbGetReg2(triton::API& ctx, const triton::arch::Register& reg)
+void cbGetReg2(triton::Context& ctx, const triton::arch::Register& reg)
 {
 	cGRVal2(&ctx, HandleReg(&reg));
 }
 
-void  addCallbackGetReg(HandleApi Handle, cbGetRegVal cb)
+void  addCallbackGetReg(HandleContext Handle, cbGetRegVal cb)
 {
 	if (cGRVal == NULL)
 	{
 		cGRVal = *cb;
-		Handle->addCallback(cbGetReg);
+		Handle->addCallback(callbacks::GET_CONCRETE_REGISTER_VALUE,cbGetReg);
 	}
 	else if (cGRVal1 == NULL)
 	{
 		cGRVal1 = *cb;
-		Handle->addCallback(cbGetReg1);
+		Handle->addCallback(callbacks::GET_CONCRETE_REGISTER_VALUE, cbGetReg1);
 	}
 	else if (cGRVal2 == NULL)
 	{
 		cGRVal2 = *cb;
-		Handle->addCallback(cbGetReg2);
+		Handle->addCallback(callbacks::GET_CONCRETE_REGISTER_VALUE, cbGetReg2);
 	}
 	else
 	{
@@ -585,35 +683,35 @@ void  addCallbackGetReg(HandleApi Handle, cbGetRegVal cb)
 
 /*addCallbackSetMem Callbacs Procedure         -- very bad implementation but it works ...:):) */
 
-void cbSetMem(triton::API& ctx, const triton::arch::MemoryAccess& mem, const triton::uint512& value)
+void cbSetMem(triton::Context& ctx, const triton::arch::MemoryAccess& mem, const triton::uint512& value)
 {
 	cSMVal(&ctx, HandleMemAcc(&mem), (uint64)value);
 }
-void cbSetMem1(triton::API& ctx, const triton::arch::MemoryAccess& mem, const triton::uint512& value)
+void cbSetMem1(triton::Context& ctx, const triton::arch::MemoryAccess& mem, const triton::uint512& value)
 {
 	cSMVal1(&ctx, HandleMemAcc(&mem), (uint64)value);
 }
-void cbSetMem2(triton::API& ctx, const triton::arch::MemoryAccess& mem, const triton::uint512& value)
+void cbSetMem2(triton::Context& ctx, const triton::arch::MemoryAccess& mem, const triton::uint512& value)
 {
 	cSMVal2(&ctx, HandleMemAcc(&mem), (uint64)value);
 }
 
-void addCallbackSetMem(HandleApi Handle, cbSetMemVal cb)
+void addCallbackSetMem(HandleContext Handle, cbSetMemVal cb)
 {
 	if (cSMVal == NULL)
 	{
 		cSMVal = *cb;
-		Handle->addCallback(cbSetMem);
+		Handle->addCallback(callbacks::SET_CONCRETE_MEMORY_VALUE, cbSetMem);
 	}
 	else if (cSMVal1 == NULL)
 	{
 		cSMVal1 = *cb;
-		Handle->addCallback(cbSetMem1);
+		Handle->addCallback(callbacks::SET_CONCRETE_MEMORY_VALUE, cbSetMem1);
 	}
 	else if (cSMVal2 == NULL)
 	{
 		cSMVal2 = *cb;
-		Handle->addCallback(cbSetMem2);
+		Handle->addCallback(callbacks::SET_CONCRETE_MEMORY_VALUE, cbSetMem2);
 	}
 	else
 	{
@@ -624,36 +722,36 @@ void addCallbackSetMem(HandleApi Handle, cbSetMemVal cb)
 
 /*addCallbackSetReg Callbacs Procedure         -- very bad implementation but it works ...:):) */
 
-void cbSetReg(triton::API& ctx , const triton::arch::Register& reg , const triton::uint512& value)
+void cbSetReg(triton::Context& ctx , const triton::arch::Register& reg , const triton::uint512& value)
 {
 	cSRVal(&ctx, HandleReg(&reg), (uint64)value);
 }
-void cbSetReg1(triton::API& ctx, const triton::arch::Register& reg, const triton::uint512& value)
+void cbSetReg1(triton::Context& ctx, const triton::arch::Register& reg, const triton::uint512& value)
 {
 	cSRVal1(&ctx, HandleReg(&reg), (uint64)value);
 }
-void cbSetReg2(triton::API& ctx, const triton::arch::Register& reg, const triton::uint512& value)
+void cbSetReg2(triton::Context& ctx, const triton::arch::Register& reg, const triton::uint512& value)
 {
 	cSRVal2(&ctx, HandleReg(&reg), (uint64)value);
 }
 
-void addCallbackSetReg(HandleApi Handle, cbSetRegVal cb)
+void addCallbackSetReg(HandleContext Handle, cbSetRegVal cb)
 {
 	
 	if (cSRVal == NULL)
 	{
 		cSRVal = *cb;
-		Handle->addCallback(cbSetReg);
+		Handle->addCallback(callbacks::SET_CONCRETE_REGISTER_VALUE, cbSetReg);
 	}
 	else if (cSRVal1 == NULL)
 	{
 		cSRVal1 = *cb;
-		Handle->addCallback(cbSetReg1);
+		Handle->addCallback(callbacks::SET_CONCRETE_REGISTER_VALUE, cbSetReg1);
 	}
 	else if (cSRVal2 == NULL)
 	{
 		cSRVal2 = *cb;
-		Handle->addCallback(cbSetReg2);
+		Handle->addCallback(callbacks::SET_CONCRETE_REGISTER_VALUE, cbSetReg2);
 	}
 	else
 	{
@@ -663,7 +761,7 @@ void addCallbackSetReg(HandleApi Handle, cbSetRegVal cb)
 
 /*addCallbackSimplif Callbacs Procedure         -- very bad implementation but it works ...:):) */
 
-triton::ast::SharedAbstractNode simplification(triton::API& ctx, const triton::ast::SharedAbstractNode& node)
+triton::ast::SharedAbstractNode simplification(triton::Context& ctx, const triton::ast::SharedAbstractNode& node)
 {	
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = node;
@@ -672,7 +770,7 @@ triton::ast::SharedAbstractNode simplification(triton::API& ctx, const triton::a
 	
 	return *cc;
 }
-triton::ast::SharedAbstractNode simplification1(triton::API& ctx, const triton::ast::SharedAbstractNode& node)
+triton::ast::SharedAbstractNode simplification1(triton::Context& ctx, const triton::ast::SharedAbstractNode& node)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = node;
@@ -681,7 +779,7 @@ triton::ast::SharedAbstractNode simplification1(triton::API& ctx, const triton::
 
 	return *cc;
 }
-triton::ast::SharedAbstractNode simplification2(triton::API& ctx, const triton::ast::SharedAbstractNode& node)
+triton::ast::SharedAbstractNode simplification2(triton::Context& ctx, const triton::ast::SharedAbstractNode& node)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = node;
@@ -690,22 +788,22 @@ triton::ast::SharedAbstractNode simplification2(triton::API& ctx, const triton::
 
 	return *cc;
 }
-void addCallbackSimplif(HandleApi Handle, cbSimplification cb)
+void addCallbackSimplif(HandleContext Handle, cbSimplification cb)
 {
 	if (cs == NULL)
 	{ 
 		cs = *cb;
-		Handle->addCallback(simplification);
+		Handle->addCallback(callbacks::SYMBOLIC_SIMPLIFICATION, simplification);
 	}
 	else if (cs1 == NULL)
 	{
 		cs1 = *cb;
-		Handle->addCallback(simplification1);
+		Handle->addCallback(callbacks::SYMBOLIC_SIMPLIFICATION, simplification1);
 	}
 	else if (cs1 == NULL)
 	{
 		cs2 = *cb;
-		Handle->addCallback(simplification2);
+		Handle->addCallback(callbacks::SYMBOLIC_SIMPLIFICATION, simplification2);
 	}
 	else 
 	{
@@ -714,7 +812,7 @@ void addCallbackSimplif(HandleApi Handle, cbSimplification cb)
 	
 }
 
-void removeAllCallbacks(HandleApi Handle)
+void removeAllCallbacks(HandleContext Handle)
 {
 	Handle->clearCallbacks();
 	cs = NULL;
@@ -738,21 +836,21 @@ void removeAllCallbacks(HandleApi Handle)
 	cGMVal2 = NULL;
 }
 
-void removeCallbackGetMem(HandleApi Handle, cbGetMemVal cb)
+void removeCallbackGetMem(HandleContext Handle, cbGetMemVal cb)
 {
 	if (cGMVal == *cb)
 	{
-		Handle->removeCallback(cbGetMem);
+		Handle->removeCallback(callbacks::GET_CONCRETE_MEMORY_VALUE, cbGetMem);
 		cGMVal = NULL;
 	}
 	else if (cGMVal1 == *cb)
 	{
-		Handle->removeCallback(cbGetMem1);
+		Handle->removeCallback(callbacks::GET_CONCRETE_MEMORY_VALUE, cbGetMem1);
 		cGMVal1 = NULL;
 	}
 	else if (cGMVal2 == *cb)
 	{
-		Handle->removeCallback(cbGetMem2);
+		Handle->removeCallback(callbacks::GET_CONCRETE_MEMORY_VALUE, cbGetMem2);
 		cGMVal2 = NULL;
 	}
 	else
@@ -761,21 +859,21 @@ void removeCallbackGetMem(HandleApi Handle, cbGetMemVal cb)
 	}
 }
 
-void removeCallbackGetReg(HandleApi Handle, cbGetRegVal cb)
+void removeCallbackGetReg(HandleContext Handle, cbGetRegVal cb)
 {
 	if (cGRVal == *cb)
 	{
-		Handle->removeCallback(cbGetReg);
+		Handle->removeCallback(callbacks::GET_CONCRETE_REGISTER_VALUE, cbGetReg);
 		cGRVal = NULL;
 	}
 	else if (cGRVal1 == *cb)
 	{
-		Handle->removeCallback(cbGetReg1);
+		Handle->removeCallback(callbacks::GET_CONCRETE_REGISTER_VALUE, cbGetReg1);
 		cGRVal1 = NULL;
 	}
 	else if (cGRVal2 == *cb)
 	{
-		Handle->removeCallback(cbGetReg2);
+		Handle->removeCallback(callbacks::GET_CONCRETE_REGISTER_VALUE, cbGetReg2);
 		cGRVal2 = NULL;
 	}
 	else
@@ -784,21 +882,21 @@ void removeCallbackGetReg(HandleApi Handle, cbGetRegVal cb)
 	}
 }
 
-void removeCallbackSetMem(HandleApi Handle, cbSetMemVal cb)
+void removeCallbackSetMem(HandleContext Handle, cbSetMemVal cb)
 {
 	if (cSMVal == *cb)
 	{
-		Handle->removeCallback(cbSetMem);
+		Handle->removeCallback(callbacks::SET_CONCRETE_MEMORY_VALUE, cbSetMem);
 		cSMVal = NULL;
 	}
 	else if (cSMVal1 == *cb)
 	{
-		Handle->removeCallback(cbSetMem1);
+		Handle->removeCallback(callbacks::SET_CONCRETE_MEMORY_VALUE, cbSetMem1);
 		cSMVal1 = NULL;
 	}
 	else if (cSMVal2 == *cb)
 	{
-		Handle->removeCallback(cbSetMem2);
+		Handle->removeCallback(callbacks::SET_CONCRETE_MEMORY_VALUE, cbSetMem2);
 		cSMVal2 = NULL;
 	}
 	else
@@ -807,21 +905,21 @@ void removeCallbackSetMem(HandleApi Handle, cbSetMemVal cb)
 	}
 }
 
-void removeCallbackSetReg(HandleApi Handle, cbSetRegVal cb)
+void removeCallbackSetReg(HandleContext Handle, cbSetRegVal cb)
 {
 	if (cSRVal == *cb)
 	{
-		Handle->removeCallback(cbSetReg);
+		Handle->removeCallback(callbacks::SET_CONCRETE_REGISTER_VALUE, cbSetReg);
 		cSRVal = NULL;
 	}
 	else if (cSRVal1 == *cb)
 	{
-		Handle->removeCallback(cbSetReg1);
+		Handle->removeCallback(callbacks::SET_CONCRETE_REGISTER_VALUE, cbSetReg1);
 		cSRVal1 = NULL;
 	}
 	else if (cSRVal2 == *cb)
 	{
-		Handle->removeCallback(cbSetReg2);
+		Handle->removeCallback(callbacks::SET_CONCRETE_REGISTER_VALUE, cbSetReg2);
 		cSRVal2 = NULL;
 	}
 	else
@@ -830,21 +928,21 @@ void removeCallbackSetReg(HandleApi Handle, cbSetRegVal cb)
 	}
 }
 
-void removeCallbackSimplif(HandleApi Handle, cbSimplification cb)
+void removeCallbackSimplif(HandleContext Handle, cbSimplification cb)
 {
 	if (cs == *cb)
 	{
-		Handle->removeCallback(simplification);
+		Handle->removeCallback(callbacks::SYMBOLIC_SIMPLIFICATION, simplification);
 		cs = NULL;
 	}
 	else if (cs1 == *cb)
 	{
-		Handle->removeCallback(simplification1);
+		Handle->removeCallback(callbacks::SYMBOLIC_SIMPLIFICATION, simplification1);
 		cs1 = NULL;
 	}
 	else if (cs2 == *cb)
 	{
-		Handle->removeCallback(simplification2);
+		Handle->removeCallback(callbacks::SYMBOLIC_SIMPLIFICATION, simplification2);
 		cs2 = NULL;
 	}
 	else
@@ -854,7 +952,7 @@ void removeCallbackSimplif(HandleApi Handle, cbSimplification cb)
 	
 }
 
-HandleAbstractNode processCallbacks(HandleApi Handle, triton::callbacks::callback_e kind, HandleAbstractNode node)
+HandleAbstractNode processCallbacks(HandleContext Handle, triton::callbacks::callback_e kind, HandleAbstractNode node)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = Handle->processCallbacks(kind, *node);
@@ -863,12 +961,12 @@ HandleAbstractNode processCallbacks(HandleApi Handle, triton::callbacks::callbac
 
 }
 
-void processCallbacksMem(HandleApi Handle, triton::callbacks::callback_e kind, HandleMemAcc mem)
+void processCallbacksMem(HandleContext Handle, triton::callbacks::callback_e kind, HandleMemAcc mem)
 {
 	Handle->processCallbacks(kind,*mem);
 }
 
-void processCallbacksReg(HandleApi Handle, triton::callbacks::callback_e kind, HandleReg reg)
+void processCallbacksReg(HandleContext Handle, triton::callbacks::callback_e kind, HandleReg reg)
 {
 	Handle->processCallbacks(kind, *reg);
 }
@@ -876,24 +974,24 @@ void processCallbacksReg(HandleApi Handle, triton::callbacks::callback_e kind, H
 
 /* Modes API====================================================================================== */
 
-void checkModes(HandleApi Handle)
+void checkModes(HandleContext Handle)
 {
 	//Handle->checkModes();
 }
 
-void setMode(HandleApi Handle,triton::modes::mode_e mode, bool flag)
+void setMode(HandleContext Handle,triton::modes::mode_e mode, bool flag)
 {
 	Handle->setMode(mode,flag);
 }
 
-bool isModeEnabled(HandleApi Handle,triton::modes::mode_e mode)
+bool isModeEnabled(HandleContext Handle,triton::modes::mode_e mode)
 {
 	return Handle->isModeEnabled(mode);
 }
 
 /* Symbolic engine API =========================================================================== */
 
-HandleSymbolicEngine getSymbolicEngine(HandleApi Handle)
+HandleSymbolicEngine getSymbolicEngine(HandleContext Handle)
 {
 	return Handle->getSymbolicEngine();
 }
@@ -935,7 +1033,7 @@ uint32 mapRegEToArray(std::unordered_map<triton::arch::register_e, triton::engin
 	return (uint32)n;
 }
 
-uint32 getSymbolicRegisters(HandleApi Handle, RegSymE **OutRegE)
+uint32 getSymbolicRegisters(HandleContext Handle, RegSymE **OutRegE)
 {
 	std::unordered_map<triton::arch::register_e, triton::engines::symbolic::SharedSymbolicExpression> s = Handle->getSymbolicRegisters();
 	auto   n = mapRegEToArray(s, OutRegE);
@@ -980,7 +1078,7 @@ uint32 mMemToArray(std::unordered_map<triton::uint64, triton::engines::symbolic:
 	return (uint32)n;
 }
 
-uint32 EXPORTCALL  getSymbolicMemory(HandleApi Handle, MemSymE **ouMemSym)
+uint32 EXPORTCALL  getSymbolicMemory(HandleContext Handle, MemSymE **ouMemSym)
 {
 	auto s = Handle->getSymbolicMemory();
 	auto   n = mMemToArray(s, ouMemSym);
@@ -988,7 +1086,7 @@ uint32 EXPORTCALL  getSymbolicMemory(HandleApi Handle, MemSymE **ouMemSym)
 	return n;
 }
 
-HandleSharedSymbolicExpression getSymbolicMemoryAddr(HandleApi Handle, triton::uint64 addr)
+HandleSharedSymbolicExpression getSymbolicMemoryAddr(HandleContext Handle, triton::uint64 addr)
 {
 	HandleSharedSymbolicExpression cc = new triton::engines::symbolic::SharedSymbolicExpression;
 	*cc = Handle->getSymbolicMemory(addr);
@@ -996,7 +1094,7 @@ HandleSharedSymbolicExpression getSymbolicMemoryAddr(HandleApi Handle, triton::u
 	return cc;
 }
 
-HandleSharedSymbolicExpression getSymbolicRegister(HandleApi Handle, HandleReg reg)
+HandleSharedSymbolicExpression getSymbolicRegister(HandleContext Handle, HandleReg reg)
 {
 	HandleSharedSymbolicExpression cc = new triton::engines::symbolic::SharedSymbolicExpression;
 	*cc = Handle->getSymbolicRegister(*reg);
@@ -1004,17 +1102,17 @@ HandleSharedSymbolicExpression getSymbolicRegister(HandleApi Handle, HandleReg r
 	return cc;
 }
 
-triton::uint8 getSymbolicMemoryValue(HandleApi Handle, triton::uint64 address)
+triton::uint8 getSymbolicMemoryValue(HandleContext Handle, triton::uint64 address)
 {
 	return Handle->getSymbolicMemoryValue(address);
 }
 
-uint64 getSymbolicMemoryValueM(HandleApi Handle, HandleMemAcc mem)
+uint64 getSymbolicMemoryValueM(HandleContext Handle, HandleMemAcc mem)
 {
 	return (uint64) Handle->getSymbolicMemoryValue(*mem);
 }
 
-retArray getSymbolicMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr, triton::usize size)
+retArray getSymbolicMemoryAreaValue(HandleContext Handle, triton::uint64 baseAddr, triton::usize size)
 {
 	std::vector<triton::uint8> v = Handle->getSymbolicMemoryAreaValue(baseAddr, size);
 
@@ -1026,12 +1124,12 @@ retArray getSymbolicMemoryAreaValue(HandleApi Handle, triton::uint64 baseAddr, t
 	return result;
 }
 
-uint64 getSymbolicRegisterValue(HandleApi Handle, HandleReg reg)
+uint64 getSymbolicRegisterValue(HandleContext Handle, HandleReg reg)
 {
 	return (uint64)Handle->getSymbolicRegisterValue(*reg);
 }
 
-HandleSharedSymbolicVariable symbolizeExpression(HandleApi Handle, triton::usize exprId, triton::uint32 symVarSize, char* symVarComment)
+HandleSharedSymbolicVariable symbolizeExpression(HandleContext Handle, triton::usize exprId, triton::uint32 symVarSize, char* symVarComment)
 {
 	if (!symVarComment)
 	{
@@ -1043,7 +1141,7 @@ HandleSharedSymbolicVariable symbolizeExpression(HandleApi Handle, triton::usize
 	return cc;
 }
 
-HandleSharedSymbolicVariable symbolizeMemory(HandleApi Handle, HandleMemAcc mem, char* symVarComment)
+HandleSharedSymbolicVariable symbolizeMemory(HandleContext Handle, HandleMemAcc mem, char* symVarComment)
 {
 	if (!symVarComment)
 	{
@@ -1055,7 +1153,7 @@ HandleSharedSymbolicVariable symbolizeMemory(HandleApi Handle, HandleMemAcc mem,
 	return cc;
 }
 
-HandleSharedSymbolicVariable symbolizeRegister(HandleApi Handle, HandleReg reg, char* symVarComment)
+HandleSharedSymbolicVariable symbolizeRegister(HandleContext Handle, HandleReg reg, char* symVarComment)
 {
 	if (!symVarComment)
 	{
@@ -1067,7 +1165,7 @@ HandleSharedSymbolicVariable symbolizeRegister(HandleApi Handle, HandleReg reg, 
 	return cc;
 }
 
-HandleAbstractNode getOperandAst(HandleApi Handle, HandleOperandWrapper op)
+HandleAbstractNode getOperandAst(HandleContext Handle, HandleOperandWrapper op)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = Handle->getOperandAst(*op);
@@ -1075,7 +1173,7 @@ HandleAbstractNode getOperandAst(HandleApi Handle, HandleOperandWrapper op)
 	return cc;
 }
 
-HandleAbstractNode getOperandAstIstruz(HandleApi Handle, HandleInstruz inst, HandleOperandWrapper op)
+HandleAbstractNode getOperandAstIstruz(HandleContext Handle, HandleInstruz inst, HandleOperandWrapper op)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = Handle->getOperandAst(*inst, *op);
@@ -1083,7 +1181,7 @@ HandleAbstractNode getOperandAstIstruz(HandleApi Handle, HandleInstruz inst, Han
 	return cc;
 }
 
-HandleAbstractNode getImmediateAst(HandleApi Handle, HandleImmediate imm)
+HandleAbstractNode getImmediateAst(HandleContext Handle, HandleImmediate imm)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = Handle->getImmediateAst(*imm);
@@ -1091,7 +1189,7 @@ HandleAbstractNode getImmediateAst(HandleApi Handle, HandleImmediate imm)
 	return cc;
 }
 
-HandleAbstractNode getImmediateAstIstruz(HandleApi Handle, HandleInstruz inst, HandleImmediate imm)
+HandleAbstractNode getImmediateAstIstruz(HandleContext Handle, HandleInstruz inst, HandleImmediate imm)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = Handle->getImmediateAst(*inst, *imm);
@@ -1099,7 +1197,7 @@ HandleAbstractNode getImmediateAstIstruz(HandleApi Handle, HandleInstruz inst, H
 	return cc;
 }
 
-HandleAbstractNode getMemoryAst(HandleApi Handle, HandleMemAcc mem)
+HandleAbstractNode getMemoryAst(HandleContext Handle, HandleMemAcc mem)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = Handle->getMemoryAst(*mem);
@@ -1107,7 +1205,7 @@ HandleAbstractNode getMemoryAst(HandleApi Handle, HandleMemAcc mem)
 	return cc;
 }
 
-HandleAbstractNode getMemoryAstIstruz(HandleApi Handle, HandleInstruz inst, HandleMemAcc mem)
+HandleAbstractNode getMemoryAstIstruz(HandleContext Handle, HandleInstruz inst, HandleMemAcc mem)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = Handle->getMemoryAst(*inst, *mem);
@@ -1115,7 +1213,7 @@ HandleAbstractNode getMemoryAstIstruz(HandleApi Handle, HandleInstruz inst, Hand
 	return cc;
 }
 
-HandleAbstractNode getRegisterAst(HandleApi Handle, HandleReg reg)
+HandleAbstractNode getRegisterAst(HandleContext Handle, HandleReg reg)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 
@@ -1123,7 +1221,7 @@ HandleAbstractNode getRegisterAst(HandleApi Handle, HandleReg reg)
 	return cc;
 }
 
-HandleAbstractNode getRegisterAstIstruz(HandleApi Handle, HandleInstruz inst, HandleReg reg)
+HandleAbstractNode getRegisterAstIstruz(HandleContext Handle, HandleInstruz inst, HandleReg reg)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = Handle->getRegisterAst(*inst, *reg);
@@ -1131,7 +1229,7 @@ HandleAbstractNode getRegisterAstIstruz(HandleApi Handle, HandleInstruz inst, Ha
 	return cc;
 }
 
-HandleSharedSymbolicExpression newSymbolicExpression(HandleApi Handle, HandleAbstractNode node, char* comment)
+HandleSharedSymbolicExpression newSymbolicExpression(HandleContext Handle, HandleAbstractNode node, char* comment)
 {
 	if (!comment)
 	{
@@ -1143,7 +1241,7 @@ HandleSharedSymbolicExpression newSymbolicExpression(HandleApi Handle, HandleAbs
 	return cc;
 }
 
-HandleSharedSymbolicVariable newSymbolicVariable(HandleApi Handle, triton::uint32 varSize, char* comment)
+HandleSharedSymbolicVariable newSymbolicVariable(HandleContext Handle, triton::uint32 varSize, char* comment)
 {
 	if (!comment)
 	{
@@ -1155,12 +1253,12 @@ HandleSharedSymbolicVariable newSymbolicVariable(HandleApi Handle, triton::uint3
 	return cc;
 }
 
-void removeSymbolicExpression(HandleApi Handle, HandleSharedSymbolicExpression symExpr)
+void removeSymbolicExpression(HandleContext Handle, HandleSharedSymbolicExpression symExpr)
 {
 	Handle->removeSymbolicExpression(*symExpr);
 }
 
-HandleSharedSymbolicExpression createSymbolicExpression(HandleApi Handle, HandleInstruz inst, HandleAbstractNode node, HandleOperandWrapper dst, char* comment)
+HandleSharedSymbolicExpression createSymbolicExpression(HandleContext Handle, HandleInstruz inst, HandleAbstractNode node, HandleOperandWrapper dst, char* comment)
 {
 	if (!comment)
 	{
@@ -1172,7 +1270,7 @@ HandleSharedSymbolicExpression createSymbolicExpression(HandleApi Handle, Handle
 	return cc;
 }
 
-HandleSharedSymbolicExpression createSymbolicMemoryExpression(HandleApi Handle, HandleInstruz inst, HandleAbstractNode node, HandleMemAcc mem, char* comment)
+HandleSharedSymbolicExpression createSymbolicMemoryExpression(HandleContext Handle, HandleInstruz inst, HandleAbstractNode node, HandleMemAcc mem, char* comment)
 {
 	if (!comment)
 	{
@@ -1184,7 +1282,7 @@ HandleSharedSymbolicExpression createSymbolicMemoryExpression(HandleApi Handle, 
 	return cc;
 }
 
-HandleSharedSymbolicExpression createSymbolicRegisterExpression(HandleApi Handle, HandleInstruz inst, HandleAbstractNode node, HandleReg reg, char* comment)
+HandleSharedSymbolicExpression createSymbolicRegisterExpression(HandleContext Handle, HandleInstruz inst, HandleAbstractNode node, HandleReg reg, char* comment)
 {
 	if (!comment)
 	{
@@ -1196,7 +1294,7 @@ HandleSharedSymbolicExpression createSymbolicRegisterExpression(HandleApi Handle
 	return cc;
 }
 
-HandleSharedSymbolicExpression createSymbolicVolatileExpression(HandleApi Handle, HandleInstruz inst, HandleAbstractNode node, char* comment)
+HandleSharedSymbolicExpression createSymbolicVolatileExpression(HandleContext Handle, HandleInstruz inst, HandleAbstractNode node, char* comment)
 {
 	if (!comment)
 	{
@@ -1208,25 +1306,33 @@ HandleSharedSymbolicExpression createSymbolicVolatileExpression(HandleApi Handle
 	return cc;
 }
 
-void assignSymbolicExpressionToMemory(HandleApi Handle, HandleSharedSymbolicExpression se, HandleMemAcc mem)
+void assignSymbolicExpressionToMemory(HandleContext Handle, HandleSharedSymbolicExpression se, HandleMemAcc mem)
 {
 	Handle->assignSymbolicExpressionToMemory(*se,*mem);
 }
 
-void assignSymbolicExpressionToRegister(HandleApi Handle, HandleSharedSymbolicExpression se, HandleReg reg)
+void assignSymbolicExpressionToRegister(HandleContext Handle, HandleSharedSymbolicExpression se, HandleReg reg)
 {
 	Handle->assignSymbolicExpressionToRegister(*se, *reg);
 }
 
-HandleAbstractNode processSimplification(HandleApi Handle, HandleAbstractNode node, bool z3)
+HandleAbstractNode simplify(HandleContext Handle, HandleAbstractNode node, bool z3)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = Handle->processSimplification(*node, z3);
+	*cc = Handle->simplify(*node, z3);
 
 	return cc;
 }
 
-HandleSharedSymbolicExpression getSymbolicExpressionFromId(HandleApi Handle, triton::usize symExprId)
+HandleBasicBlock simplify_BB(HandleContext Handle, HandleBasicBlock block, bool padding) 
+{
+  HandleBasicBlock cc = new triton::arch::BasicBlock;
+  *cc = Handle->simplify(*block, padding);
+
+  return cc;
+}
+
+HandleSharedSymbolicExpression getSymbolicExpressionFromId(HandleContext Handle, triton::usize symExprId)
 {
 	HandleSharedSymbolicExpression cc = new triton::engines::symbolic::SharedSymbolicExpression;
 	*cc = Handle->getSymbolicExpression(symExprId);
@@ -1234,7 +1340,7 @@ HandleSharedSymbolicExpression getSymbolicExpressionFromId(HandleApi Handle, tri
 	return cc;
 }
 
-HandleSharedSymbolicVariable getSymbolicVariableFromId(HandleApi Handle, triton::usize symVarId)
+HandleSharedSymbolicVariable getSymbolicVariableFromId(HandleContext Handle, triton::usize symVarId)
 {
 	HandleSharedSymbolicVariable cc = new triton::engines::symbolic::SharedSymbolicVariable;
 	*cc = Handle->getSymbolicVariable(symVarId);
@@ -1242,7 +1348,7 @@ HandleSharedSymbolicVariable getSymbolicVariableFromId(HandleApi Handle, triton:
 	return cc;
 }
 
-HandleSharedSymbolicVariable getSymbolicVariableFromName(HandleApi Handle, char* symVarName)
+HandleSharedSymbolicVariable getSymbolicVariableFromName(HandleContext Handle, char* symVarName)
 {
 	if (!symVarName)
 	{
@@ -1254,7 +1360,7 @@ HandleSharedSymbolicVariable getSymbolicVariableFromName(HandleApi Handle, char*
 	return cc;
 }
 
-uint32 getPathConstraints(HandleApi Handle, HandlePathConstraint *& outPath)
+uint32 getPathConstraints(HandleContext Handle, HandlePathConstraint *& outPath)
 {
 	std::vector<triton::engines::symbolic::PathConstraint> p = Handle->getPathConstraints();
 
@@ -1273,7 +1379,7 @@ uint32 getPathConstraints(HandleApi Handle, HandlePathConstraint *& outPath)
 	return (uint32)n;
 }
 
-HandleAbstractNode getPathPredicate(HandleApi Handle)
+HandleAbstractNode getPathPredicate(HandleContext Handle)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
 	*cc = Handle->getPathPredicate();
@@ -1281,73 +1387,63 @@ HandleAbstractNode getPathPredicate(HandleApi Handle)
 	return cc;
 }
 
-void pushPathConstraint(HandleApi Handle, HandleAbstractNode node)
+void pushPathConstraint(HandleContext Handle, HandleAbstractNode node)
 {
 	Handle->pushPathConstraint(*node);
 }
 
-void pushPathConstraintPco(HandleApi Handle, HandlePathConstraint pco)
+void pushPathConstraintPco(HandleContext Handle, HandlePathConstraint pco)
 {
   Handle->pushPathConstraint(*pco);
 }
 
 
-void clearPathConstraints(HandleApi Handle)
+void clearPathConstraints(HandleContext Handle)
 {
 	Handle->clearPathConstraints();
 }
 
-void enableSymbolicEngine(HandleApi Handle, bool flag)
-{
-	Handle->enableSymbolicEngine(flag);
-}
-
-bool isSymbolicEngineEnabled(HandleApi Handle)
-{
-	return Handle->isSymbolicEngineEnabled();
-}
-
-bool isSymbolicExpressionIdExists(HandleApi Handle, triton::usize symExprId)
+bool isSymbolicExpressionIdExists(HandleContext Handle, triton::usize symExprId)
 {
 	return Handle->isSymbolicExpressionExists(symExprId);
 }
 
-bool isMemorySymbolized(HandleApi Handle, HandleMemAcc mem)
+bool isMemorySymbolized(HandleContext Handle, HandleMemAcc mem)
 {
 	return Handle->isMemorySymbolized(*mem);
 }
 
-bool isMemorySymbolizedSize(HandleApi Handle, triton::uint64 addr, triton::uint32 size)
+bool isMemorySymbolizedSize(HandleContext Handle, triton::uint64 addr, triton::uint32 size)
 {
 	return Handle->isMemorySymbolized(addr, size);
 }
 
-bool isRegisterSymbolized(HandleApi Handle, HandleReg reg)
+bool isRegisterSymbolized(HandleContext Handle, HandleReg reg)
 {
 	return Handle->isRegisterSymbolized(*reg);
 }
 
-void concretizeAllMemory(HandleApi Handle)
+void concretizeAllMemory(HandleContext Handle)
 {
 	Handle->concretizeAllMemory();
 }
 
-void concretizeAllRegister(HandleApi Handle)
+void concretizeAllRegister(HandleContext Handle)
 {
 	Handle->concretizeAllRegister();
 }
 
-void concretizeMemoryM(HandleApi Handle, HandleMemAcc mem)
+void concretizeMemoryM(HandleContext Handle, HandleMemAcc mem)
 {
 	Handle->concretizeMemory(*mem);
 }
 
-void concretizeMemory(HandleApi Handle, triton::uint64 addr)
+void concretizeMemory(HandleContext Handle, triton::uint64 addr)
 {
 	Handle->concretizeMemory(addr);
 }
 
-void concretizeRegister(HandleApi Handle, HandleReg reg)
+void concretizeRegister(HandleContext Handle, HandleReg reg)
 {
 	Handle->concretizeRegister(*reg);
 }
@@ -1389,7 +1485,7 @@ uint32 mSliceToArray(std::unordered_map<triton::usize, triton::engines::symbolic
 	return (uint32)n;
 }
 
-uint32 sliceExpressions(HandleApi Handle, HandleSharedSymbolicExpression expr, IdSymExpr **outSlice)
+uint32 sliceExpressions(HandleContext Handle, HandleSharedSymbolicExpression expr, IdSymExpr **outSlice)
 {
 	auto s = Handle->sliceExpressions(*expr);
 	auto   n = mSliceToArray(s, outSlice);
@@ -1397,7 +1493,7 @@ uint32 sliceExpressions(HandleApi Handle, HandleSharedSymbolicExpression expr, I
 	return n;
 }
 
-uint32 getTaintedSymbolicExpressions(HandleApi Handle, HandleSharedSymbolicExpression *& outSimbolicExp)
+uint32 getTaintedSymbolicExpressions(HandleContext Handle, HandleSharedSymbolicExpression *& outSimbolicExp)
 {
 	std::vector<triton::engines::symbolic::SharedSymbolicExpression>  r = Handle->getTaintedSymbolicExpressions();
 	size_t n = r.size();
@@ -1457,7 +1553,7 @@ uint32 mSymToArray(std::unordered_map<triton::usize, triton::engines::symbolic::
 	return (uint32)n;
 }
 
-uint32 getSymbolicExpressions(HandleApi Handle, IdSymExpr **outSymMap)
+uint32 getSymbolicExpressions(HandleContext Handle, IdSymExpr **outSymMap)
 {
 	auto s = Handle->getSymbolicExpressions();
 	auto   n = mSymToArray(s, outSymMap);
@@ -1465,7 +1561,7 @@ uint32 getSymbolicExpressions(HandleApi Handle, IdSymExpr **outSymMap)
 	return n;
 }
 
-uint32 mSymVarToArray(std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable> mSymVar, IdSymVar **outSymVar)
+uint32 mSymVarToArray(std::map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable> mSymVar, IdSymVar **outSymVar)
 {
 	auto   n = mSymVar.size();
 
@@ -1502,25 +1598,25 @@ uint32 mSymVarToArray(std::unordered_map<triton::usize, triton::engines::symboli
 	return (uint32)n;
 }
 
-uint32  getSymbolicVariables(HandleApi Handle, IdSymVar **outSymVar)
+uint32  getSymbolicVariables(HandleContext Handle, IdSymVar **outSymVar)
 {
-	std::unordered_map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable> m = Handle->getSymbolicVariables();
+	std::map<triton::usize, triton::engines::symbolic::SharedSymbolicVariable> m = Handle->getSymbolicVariables();
 	auto   n = mSymVarToArray(m, outSymVar);
 
 	return n;
 }
 
-uint64 getConcreteVariableValue(HandleApi Handle, HandleSharedSymbolicVariable symVar)
+uint64 getConcreteVariableValue(HandleContext Handle, HandleSharedSymbolicVariable symVar)
 {
 	return (uint64) Handle->getConcreteVariableValue(*symVar);
 }
 
-void setConcreteVariableValue(HandleApi Handle, HandleSharedSymbolicVariable symVar, const uint64 value)
+void setConcreteVariableValue(HandleContext Handle, HandleSharedSymbolicVariable symVar, const uint64 value)
 {
 	Handle->setConcreteVariableValue(*symVar, value);
 }
 
-void initLeaAst(HandleApi Handle, HandleMemAcc mem, bool force)
+void initLeaAst(HandleContext Handle, HandleMemAcc mem, bool force)
 {
 	Handle->getSymbolicEngine()->initLeaAst(*mem, force);
 }
@@ -1566,15 +1662,15 @@ uint32 ModelToArray(std::unordered_map<triton::usize, triton::engines::solver::S
 	return (uint32)n;
 }
 
-uint32 getModel(HandleApi Handle, HandleAbstractNode node, AddrSolver **outModel)
+uint32 getModel(HandleContext Handle, HandleAbstractNode node, AddrSolver** outModel, triton::uint32* status, triton::uint32 timeout, triton::uint32* solvingTime)
 {
-	auto   s = Handle->getModel(*node);
+	auto   s = Handle->getModel(*node, (triton::engines::solver::status_e*)status, timeout, solvingTime);
 	auto   n = ModelToArray(s, outModel);
 
 	return n;
 }
 
-uint32 getModels(HandleApi Handle, HandleAbstractNode node, triton::uint32 limit, AddrSolver ***outModels)
+uint32 getModels(HandleContext Handle, HandleAbstractNode node, triton::uint32 limit, AddrSolver ***outModels)
 {
 
 	auto s = Handle->getModels(*node, limit);
@@ -1605,48 +1701,48 @@ uint32 getModels(HandleApi Handle, HandleAbstractNode node, triton::uint32 limit
 
 }
 
-bool isSat(HandleApi Handle, HandleAbstractNode node)
+bool isSat(HandleContext Handle, HandleAbstractNode node)
 {
 	return Handle->isSat(*node);
 }
 
-triton::engines::solver::solver_e getSolver(HandleApi Handle)
+triton::engines::solver::solver_e getSolver(HandleContext Handle)
 {
 	return Handle->getSolver();
 }
 
 
-HandleSolverInterface getSolverInstance(HandleApi Handle)
+HandleSolverInterface getSolverInstance(HandleContext Handle)
 {
 	//triton::engines::solver::SolverInterface s = new (triton::engines::solver::SolverInterface);
 	return NULL;
 }
 
 
-void setSolver(HandleApi Handle, triton::engines::solver::solver_e kind)
+void setSolver(HandleContext Handle, triton::engines::solver::solver_e kind)
 {
 	Handle->setSolver(kind);
 }
 
-void setCustomSolver(HandleApi Handle, HandleSolverInterface customSolver)
+void setCustomSolver(HandleContext Handle, HandleSolverInterface customSolver)
 {
 	Handle->setCustomSolver(customSolver);
 }
 
-bool isSolverValid(HandleApi Handle)
+bool isSolverValid(HandleContext Handle)
 {
 	return Handle->isSolverValid();
 }
 
-uint64 evaluateAstViaZ3(HandleApi Handle, HandleAbstractNode node)
+uint64 evaluateAstViaSolver(HandleContext Handle, HandleAbstractNode node)
 {
-	return (uint64)Handle->evaluateAstViaZ3(*node);
+	return (uint64)Handle->evaluateAstViaSolver(*node);
 }
 
-HandleAbstractNode processZ3Simplification(HandleApi Handle, HandleAbstractNode node)
+HandleAbstractNode simplifyAstViaSolver(HandleContext Handle, HandleAbstractNode node)
 {
 	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
-	*cc = Handle->processZ3Simplification(*node);
+	*cc = Handle->simplifyAstViaSolver(*node);
 
 	return cc;
 }
@@ -1656,12 +1752,12 @@ HandleAbstractNode processZ3Simplification(HandleApi Handle, HandleAbstractNode 
 * ==============================================================================
 */
 
-HandleTaintEngine getTaintEngine(HandleApi Handle)
+HandleTaintEngine getTaintEngine(HandleContext Handle)
 {
 	return Handle->getTaintEngine();
 }
 
-uint32 getTaintedMemory(HandleApi Handle, uint64 *& outMemAddrs)
+uint32 getTaintedMemory(HandleContext Handle, uint64 *& outMemAddrs)
 {
 	std::unordered_set<triton::uint64> s = Handle->getTaintedMemory();
 	size_t n = s.size();
@@ -1682,7 +1778,7 @@ uint32 getTaintedMemory(HandleApi Handle, uint64 *& outMemAddrs)
 	return (uint32)n;
 }
 
-uint32 getTaintedRegisters(HandleApi Handle, HandleReg*& outRegs)
+uint32 getTaintedRegisters(HandleContext Handle, HandleReg*& outRegs)
 {
 	std::unordered_set<const triton::arch::Register*> r = Handle->getTaintedRegisters();
 	size_t n = r.size();
@@ -1705,149 +1801,207 @@ uint32 getTaintedRegisters(HandleApi Handle, HandleReg*& outRegs)
 	return (uint32)n;
 }
 
-void enableTaintEngine(HandleApi Handle, bool flag)
-{
-	Handle->enableTaintEngine(flag);
-}
-
-bool isTaintEngineEnabled(HandleApi Handle)
-{
-	return Handle->isTaintEngineEnabled();
-}
-
-bool isTainted(HandleApi Handle, HandleOperandWrapper op)
+bool isTainted(HandleContext Handle, HandleOperandWrapper op)
 {
 	return Handle->isTainted(*op);
 }
 
-bool isMemoryTainted(HandleApi Handle, triton::uint64 addr, triton::uint32 size)
+bool isMemoryTainted(HandleContext Handle, triton::uint64 addr, triton::uint32 size)
 {
 	return Handle->isMemoryTainted(addr, size);
 }
 
-bool isMemoryTaintedMem(HandleApi Handle, HandleMemAcc mem)
+bool isMemoryTaintedMem(HandleContext Handle, HandleMemAcc mem)
 {
 	return Handle->isMemoryTainted(*mem);
 }
 
-bool isRegisterTainted(HandleApi Handle, HandleReg reg)
+bool isRegisterTainted(HandleContext Handle, HandleReg reg)
 {
 	return Handle->isRegisterTainted(*reg);
 }
 
-bool setTaint(HandleApi Handle, HandleOperandWrapper op, bool flag)
+bool setTaint(HandleContext Handle, HandleOperandWrapper op, bool flag)
 {
 	return Handle->setTaint(*op, flag);
 }
 
-bool setTaintMemory(HandleApi Handle, HandleMemAcc mem, bool flag)
+bool setTaintMemory(HandleContext Handle, HandleMemAcc mem, bool flag)
 {
 	return Handle->setTaintMemory(*mem, flag);
 }
 
-bool setTaintRegister(HandleApi Handle, HandleReg reg, bool flag)
+bool setTaintRegister(HandleContext Handle, HandleReg reg, bool flag)
 {
 	return Handle->setTaintRegister(*reg, flag);
 }
 
-bool taintMemory(HandleApi Handle, triton::uint64 addr)
+bool taintMemory(HandleContext Handle, triton::uint64 addr)
 {
 	return Handle->taintMemory(addr);
 }
 
-bool taintMemoryMem(HandleApi Handle, HandleMemAcc mem)
+bool taintMemoryMem(HandleContext Handle, HandleMemAcc mem)
 {
 	return Handle->taintMemory(*mem);
 }
 
-bool taintRegister(HandleApi Handle, HandleReg reg)
+bool taintRegister(HandleContext Handle, HandleReg reg)
 {
 	return Handle->taintRegister(*reg);
 }
 
-bool untaintMemory(HandleApi Handle, triton::uint64 addr)
+bool untaintMemory(HandleContext Handle, triton::uint64 addr)
 {
 	return Handle->untaintMemory(addr);
 }
 
-bool untaintMemoryMem(HandleApi Handle, HandleMemAcc mem)
+bool untaintMemoryMem(HandleContext Handle, HandleMemAcc mem)
 {
 	return Handle->untaintMemory(*mem);
 }
 
-bool untaintRegister(HandleApi Handle, HandleReg reg)
+bool untaintRegister(HandleContext Handle, HandleReg reg)
 {
 	return Handle->untaintRegister(*reg);
 }
 
-bool taintUnion(HandleApi Handle, HandleOperandWrapper op1, HandleOperandWrapper op2)
+bool taintUnion(HandleContext Handle, HandleOperandWrapper op1, HandleOperandWrapper op2)
 {
 	return Handle->taintUnion(*op1, *op2);
 }
 
-bool taintAssignment(HandleApi Handle, HandleOperandWrapper op1, HandleOperandWrapper op2)
+bool taintAssignment(HandleContext Handle, HandleOperandWrapper op1, HandleOperandWrapper op2)
 {
 	return Handle->taintAssignment(*op1, *op2);
 }
 
-bool taintUnionMemoryImmediate(HandleApi Handle, HandleMemAcc memDst, HandleImmediate imm )
+bool taintUnionMemoryImmediate(HandleContext Handle, HandleMemAcc memDst, HandleImmediate imm )
 {
 	return Handle->taintUnion(*memDst,*imm);
 }
 
-bool taintUnionMemoryMemory(HandleApi Handle, HandleMemAcc memDst, HandleMemAcc memSrc)
+bool taintUnionMemoryMemory(HandleContext Handle, HandleMemAcc memDst, HandleMemAcc memSrc)
 {
 	return Handle->taintUnion(*memDst,*memSrc);
 }
 
-bool taintUnionMemoryRegister(HandleApi Handle, HandleMemAcc memDst, HandleReg regSrc)
+bool taintUnionMemoryRegister(HandleContext Handle, HandleMemAcc memDst, HandleReg regSrc)
 {
 	return Handle->taintUnion(*memDst,*regSrc);
 }
 
-bool taintUnionRegisterImmediate(HandleApi Handle, HandleReg regDst, HandleImmediate imm)
+bool taintUnionRegisterImmediate(HandleContext Handle, HandleReg regDst, HandleImmediate imm)
 {
 	return Handle->taintUnion(*regDst,*imm);
 }
 
-bool taintUnionRegisterMemory(HandleApi Handle, HandleReg regDst, HandleMemAcc memSrc)
+bool taintUnionRegisterMemory(HandleContext Handle, HandleReg regDst, HandleMemAcc memSrc)
 {
 	return Handle->taintUnion(*regDst,*memSrc);
 }
 
-bool taintUnionRegisterRegister(HandleApi Handle, HandleReg regDst, HandleReg regSrc)
+bool taintUnionRegisterRegister(HandleContext Handle, HandleReg regDst, HandleReg regSrc)
 {
 	return Handle->taintUnion(*regDst,*regSrc);
 }
 
-bool taintAssignmentMemoryImmediate(HandleApi Handle, HandleMemAcc memDst, HandleImmediate imm)
+bool taintAssignmentMemoryImmediate(HandleContext Handle, HandleMemAcc memDst, HandleImmediate imm)
 {
 	return Handle->taintAssignment(*memDst,*imm);
 }
 
-bool taintAssignmentMemoryMemory(HandleApi Handle, HandleMemAcc memDst, HandleMemAcc memSrc)
+bool taintAssignmentMemoryMemory(HandleContext Handle, HandleMemAcc memDst, HandleMemAcc memSrc)
 {
 	return Handle->taintAssignment(*memDst,*memSrc);
 }
 
-bool taintAssignmentMemoryRegister(HandleApi Handle, HandleMemAcc memDst, HandleReg regSrc)
+bool taintAssignmentMemoryRegister(HandleContext Handle, HandleMemAcc memDst, HandleReg regSrc)
 {
 	return Handle->taintAssignment(*memDst,*regSrc);
 }
 
-bool taintAssignmentRegisterImmediate(HandleApi Handle, HandleReg regDst, HandleImmediate imm)
+bool taintAssignmentRegisterImmediate(HandleContext Handle, HandleReg regDst, HandleImmediate imm)
 {
 	return Handle->taintAssignment(*regDst,*imm);
 }
 
-bool taintAssignmentRegisterMemory(HandleApi Handle, HandleReg regDst, HandleMemAcc memSrc)
+bool taintAssignmentRegisterMemory(HandleContext Handle, HandleReg regDst, HandleMemAcc memSrc)
 {
 	return Handle->taintAssignment(*regDst,*memSrc);
 }
 
-bool taintAssignmentRegisterRegister(HandleApi Handle, HandleReg regDst, HandleReg regSrc)
+bool taintAssignmentRegisterRegister(HandleContext Handle, HandleReg regDst, HandleReg regSrc)
 {
 	return Handle->taintAssignment(*regDst,*regSrc);
+}
+
+/* Synthesizer engine Context ============================================================================= */
+
+HandleSynthesisResult synthesize(HandleContext Handle, HandleAbstractNode node, bool constant, bool subexpr, bool opaque) 
+{		
+	auto synt = new triton::engines::synthesis::SynthesisResult( Handle->synthesize(*node, constant, subexpr, opaque) );
+
+	return synt;
+}
+
+/* Lifters engine Context ================================================================================= */
+
+char* NodeliftToLLVM(HandleContext Handle, HandleAbstractNode node, const char* fname, bool optimize)
+{
+	std::ostringstream stream;
+	Handle->liftToLLVM(stream, *node, fname, optimize);
+
+	return strdup( stream.str().c_str() );
+}
+
+char* ExprliftToLLVM(HandleContext Handle, HandleSharedSymbolicExpression expr, const char* fname, bool optimize)
+{
+	std::ostringstream stream;
+	Handle->liftToLLVM(stream, *expr, fname, optimize);
+
+	return strdup(stream.str().c_str());
+}
+
+char* liftToPython(HandleContext Handle, HandleSharedSymbolicExpression expr, bool icomment)
+{
+	std::ostringstream stream;
+	Handle->liftToPython(stream, *expr, icomment);
+
+	return strdup(stream.str().c_str());
+}
+
+char* liftToSMT(HandleContext Handle, HandleSharedSymbolicExpression expr, bool assert_, bool icomment)
+{
+	std::ostringstream stream;
+	Handle->liftToSMT(stream, *expr, assert_, icomment);
+
+	return strdup(stream.str().c_str());
+}
+
+char* NodeliftToDot(HandleContext Handle, HandleAbstractNode node)
+{
+	std::ostringstream stream;
+	Handle->liftToDot(stream, *node);
+
+	return strdup(stream.str().c_str());
+}
+
+char* ExprliftToDot(HandleContext Handle, HandleSharedSymbolicExpression expr)
+{
+	std::ostringstream stream;
+	Handle->liftToDot(stream, *expr);
+
+	return strdup(stream.str().c_str());
+}
+
+HandleAbstractNode simplifyAstViaLLVM(HandleContext Handle, HandleAbstractNode node)
+{
+	HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
+
+	*cc = Handle->simplifyAstViaLLVM(*node);
+
+	return cc;
 }
 
 
@@ -1940,6 +2094,10 @@ void  REGDelete(HandleReg Handle)
 	delete Handle;
 }
 
+bool REGisOverlapWith(HandleReg r1, HandleReg other)
+{
+  return r1->isOverlapWith(*other);
+}
 /* MemoryAccess =============================================================================*/
 
 HandleMemAcc MEMCreateMemory()
@@ -2043,6 +2201,75 @@ void OPsetMemory(HandleOperandWrapper hOp, HandleMemAcc mem)
 void OPsetRegister(HandleOperandWrapper hOp, HandleReg reg)
 {
 	hOp->setRegister(*reg);
+}
+
+/*  BasicBlock ==============================================================================*/
+
+HandleBasicBlock BB_BasicBlock()
+{ 
+  return new BasicBlock(); 
+}
+
+HandleBasicBlock BB_BasicBlockFromArray(HandleInstruz *instructions, uint32 num_instructions) 
+{
+        triton::arch::BasicBlock *block = new triton::arch::BasicBlock();
+        for (size_t i = 0; i < num_instructions; ++i) {
+                block->add(*instructions[i]); 
+        }
+        return block;
+}
+
+HandleBasicBlock BB_BasicBlockFrom(HandleBasicBlock other)
+{
+ return new BasicBlock(*other);
+}
+
+void DeleteBasicBlock(HandleBasicBlock H)
+{ 
+  delete H; 
+}
+
+void BB_add(HandleBasicBlock handle, HandleInstruz instruction)
+{
+ handle->add(*instruction);
+}
+
+bool BB_remove(HandleBasicBlock handle, triton::uint32 position)
+{
+ return handle->remove(position);
+}
+
+uint32 BB_getInstructions(HandleBasicBlock handle, HandleInstruz **instructions) 
+{
+   auto &instrVector = handle->getInstructions();
+
+   uint32_t numInstructions = static_cast<uint32_t>(instrVector.size());
+
+   *instructions =  (HandleInstruz *)malloc(sizeof(HandleInstruz) * numInstructions);
+
+   if (*instructions == NULL) {
+                  return 0;
+   }
+   for (uint32_t i = 0; i < numInstructions; ++i) 
+   {
+     (*instructions)[i] = const_cast<HandleInstruz>( &(instrVector[i])); 
+   }
+      
+   return numInstructions;
+}
+usize BB_getSize(HandleBasicBlock handle) 
+{ 
+  return handle->getSize(); 
+}
+
+uint64 BB_getFirstAddress(HandleBasicBlock handle)
+{ 
+  return handle->getFirstAddress();
+}
+
+uint64 BB_getLastAddress(HandleBasicBlock handle)
+{
+  return handle->getLastAddress();
 }
 
 /*  Istruction ============================================================================== */
@@ -2363,6 +2590,10 @@ uint32 EXPORTCALL IGetOperand(HandleInstruz hIstr, HandleOperandWrapper ** outAr
 	return (uint32)n;
 }
 
+bool IisSymbolized(HandleInstruz hIstr)
+{
+  return hIstr->isSymbolized();
+}
 
 
 /*  SymbolicExpression ============================================================================== */
@@ -2724,7 +2955,7 @@ triton::uint32 RAPgetMode(hAstRepresentation handle)
 
 void RAPsetMode(hAstRepresentation handle, triton::uint32 mode)
 {
-	handle->setMode(mode);
+	handle->setMode((triton::ast::representations::mode_e)mode);
 }
 
 
@@ -3192,7 +3423,7 @@ triton::uint64 getVariableValue(HandleAstContext hCtx, char * varName)
 
 void setRepresentationMode(HandleAstContext hCtx, triton::uint32 mode)
 {
-	hCtx->get()->setRepresentationMode(mode);
+	hCtx->get()->setRepresentationMode((triton::ast::representations::mode_e)mode);
 }
 
 triton::uint32 getRepresentationMode(HandleAstContext hCtx)
@@ -3410,7 +3641,12 @@ triton::uint64 Node_hash(HandleAbstractNode node)
 	return (uint64)node->get()->getHash();
 }
 
-triton::uint64 EXPORTCALL NodeInteger_getInteger(HandleAbstractNode node)
+triton::uint32 Node_Level(HandleAbstractNode node)
+{
+  return (uint32)node->get()->getLevel();
+}
+
+triton::uint64 NodeInteger_getInteger(HandleAbstractNode node)
 {
 	if (node->get()->getType() == INTEGER_NODE) {
 		auto v = (IntegerNode*)node->get();
@@ -3419,7 +3655,7 @@ triton::uint64 EXPORTCALL NodeInteger_getInteger(HandleAbstractNode node)
 	return 0;
 }
 
-HandleSharedSymbolicExpression EXPORTCALL NodeRef_getSymbolicExpression(HandleAbstractNode node)
+HandleSharedSymbolicExpression NodeRef_getSymbolicExpression(HandleAbstractNode node)
 {
 	if (node->get()->getType() == REFERENCE_NODE) {
 		HandleSharedSymbolicExpression cc = new std::shared_ptr<triton::engines::symbolic::SymbolicExpression>;
@@ -3432,7 +3668,7 @@ HandleSharedSymbolicExpression EXPORTCALL NodeRef_getSymbolicExpression(HandleAb
 	return NULL;
 }
 
-HandleSharedSymbolicVariable EXPORTCALL NodeRef_getSymbolicVariable(HandleAbstractNode node)
+HandleSharedSymbolicVariable NodeRef_getSymbolicVariable(HandleAbstractNode node)
 {
 	if (node->get()->getType() == VARIABLE_NODE) {
 		HandleSharedSymbolicVariable cc = new std::shared_ptr<triton::engines::symbolic::SymbolicVariable>;
@@ -3555,3 +3791,74 @@ bool PCisMultipleBranches(HandlePathConstraint Handle)
 	return Handle->isMultipleBranches();
 }
 
+/*  SynthesisResult ======================================================================== */
+
+HandleSynthesisResult SyntResult()
+{
+  return new triton::engines::synthesis::SynthesisResult();
+}
+
+HandleSynthesisResult SyntResultFrom(HandleSynthesisResult other)
+{
+  return new triton::engines::synthesis::SynthesisResult(*other);
+}
+
+void SyntResultDelete(HandleSynthesisResult Handle)
+{
+  delete Handle;
+}
+
+HandleAbstractNode SyntResultgetInput(HandleSynthesisResult Handle)
+{
+  HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
+  *cc = Handle->getInput();
+
+  return cc;
+}
+
+HandleAbstractNode SyntResultgetOutput(HandleSynthesisResult Handle)
+{
+  HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
+  *cc = Handle->getOutput();
+
+  return cc;
+}
+
+bool SyntResultsuccessful(HandleSynthesisResult Handle)
+{
+  return Handle->successful();
+}
+
+/*  LLVMToTriton ======================================================================== */
+
+
+HLLVMToTriton LLVMToTritonCtx(HandleContext ctx)
+{
+  return new triton::ast::LLVMToTriton(*ctx);
+}
+
+HLLVMToTriton LLVMToTritonNode(HandleAstContext actx)
+{
+  return new triton::ast::LLVMToTriton(*actx);
+}
+
+void LLVMToTritonDelete(HLLVMToTriton Handle)
+{
+  delete Handle;
+}
+
+HandleAbstractNode convertModule(HLLVMToTriton Handle, LLVMModuleRef llvmModule, char* fname )
+{
+  HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
+  *cc = Handle->convert(llvm::unwrap(llvmModule), fname);
+
+  return cc;
+}
+
+HandleAbstractNode convertValue(HLLVMToTriton Handle, LLVMValueRef instruction)
+{
+  HandleAbstractNode cc = new std::shared_ptr<triton::ast::AbstractNode>;
+  *cc = Handle->convert(llvm::unwrap<llvm::Instruction> (instruction));
+
+  return cc;
+}
